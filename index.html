@@ -634,7 +634,8 @@
             border: 1px solid var(--glass-border);
             color: var(--text-muted);
             cursor: pointer;
-            padding: 6px 12px;
+            padding: 8px 16px; /* Bug Fix: Added strict padding */
+            width: fit-content; /* Bug Fix: Stop horizontal stretching */
             border-radius: var(--radius-md);
             font-size: 12px;
             font-weight: 600;
@@ -652,7 +653,8 @@
             border: 1px solid var(--glass-border);
             color: var(--text-muted);
             cursor: pointer;
-            padding: 6px 12px;
+            padding: 8px 16px; /* Bug Fix: Added strict padding */
+            width: fit-content; /* Bug Fix: Stop horizontal stretching */
             border-radius: var(--radius-md);
             font-size: 12px;
             font-weight: 600;
@@ -667,7 +669,12 @@
         .food-card-header {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center; /* Bug Fix: Changed from flex-start to prevent stretching */
+        }
+        .food-card-header .action-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         /* * 6. PHASE 3 EXPANSION - DAILY LOG TIMELINE 
@@ -797,7 +804,7 @@
             border-color: rgba(255, 68, 68, 0.3);
         }
 
-        /* * 5. PHASE 4 - DASHBOARD CHARTS & CALENDAR STYLES
+        /* * 5. PHASE 4 & 7 - DASHBOARD CHARTS & CALENDAR STYLES
          */
         
         /* Macros Ring Grid */
@@ -861,7 +868,7 @@
             font-weight: 500;
         }
 
-        /* Streak Calendar */
+        /* Full Interactive Calendar Styles */
         .streak-section {
             margin-top: 48px;
             background: var(--glass-bg);
@@ -871,15 +878,34 @@
             backdrop-filter: blur(12px);
         }
 
-        .streak-header {
+        .calendar-header {
             display: flex;
             justify-content: space-between;
-            align-items: baseline;
+            align-items: center;
             margin-bottom: 24px;
         }
 
-        .streak-header h2 {
-            font-size: 24px;
+        .calendar-nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .calendar-nav-btn:hover {
+            background: var(--glass-highlight);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .calendar-month-year {
+            font-size: 20px;
             font-weight: 600;
         }
 
@@ -891,6 +917,7 @@
             border-radius: var(--radius-full);
             font-weight: 700;
             font-size: 14px;
+            display: inline-block;
         }
         body.limit-exceeded .streak-count-badge {
             background: rgba(255, 42, 42, 0.1);
@@ -898,47 +925,74 @@
             border-color: rgba(255, 42, 42, 0.2);
         }
 
-        .calendar-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 600;
         }
 
-        .calendar-day {
-            width: calc(10% - 9px); /* Roughly 10 items per row on desktop */
+        .calendar-grid-full {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .calendar-cell {
             aspect-ratio: 1;
-            border-radius: var(--radius-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            position: relative;
             transition: all var(--transition-smooth);
+            color: var(--text-secondary);
+            cursor: default;
+        }
+
+        .calendar-cell.today {
+            border-color: var(--accent-blue);
+            box-shadow: inset 0 0 12px rgba(0, 240, 255, 0.1), 0 0 12px rgba(0, 240, 255, 0.3);
+            color: var(--accent-blue);
+        }
+
+        .calendar-cell.grayed-out {
+            opacity: 0.3;
+        }
+
+        .calendar-cell.success {
+            background: rgba(0, 255, 102, 0.05);
+            border-color: rgba(0, 255, 102, 0.2);
+            color: var(--text-primary);
+        }
+        
+        .calendar-cell.failed {
+            background: rgba(255, 68, 68, 0.05);
+            border-color: rgba(255, 68, 68, 0.2);
+            color: var(--text-primary);
+        }
+
+        .gamification-overlay {
+            font-size: 20px;
+            margin-top: auto;
+            margin-bottom: 4px;
+            line-height: 1;
         }
 
         @media (max-width: 768px) {
-            .calendar-day { width: calc(14.28% - 9px); /* 7 items per row on mobile */ }
-        }
-
-        .calendar-day.success {
-            background: rgba(0, 255, 102, 0.05);
-            border-color: rgba(0, 255, 102, 0.2);
-            box-shadow: inset 0 0 12px rgba(0, 255, 102, 0.1);
-        }
-        
-        .calendar-day.failed {
-            background: rgba(255, 68, 68, 0.05);
-            border-color: rgba(255, 68, 68, 0.2);
-            filter: grayscale(100%);
-            opacity: 0.5;
-        }
-
-        .calendar-day.empty span {
-            width: 6px;
-            height: 6px;
-            background: var(--text-muted);
-            border-radius: 50%;
+            .calendar-cell { padding: 4px; font-size: 12px; }
+            .gamification-overlay { font-size: 16px; margin-bottom: 2px; }
+            .calendar-weekdays { font-size: 11px; }
         }
 
     </style>
@@ -1039,14 +1093,24 @@
                 </div>
             </div>
 
-            <!-- Phase 4: Streak Calendar -->
+            <!-- Phase 7: Full Interactive Calendar -->
             <div class="streak-section">
-                <div class="streak-header">
-                    <h2>30-Day Streak Map</h2>
+                <div class="calendar-header">
+                    <button id="cal-prev-btn" class="calendar-nav-btn">&lt;</button>
+                    <h3 id="calendar-month-year" class="calendar-month-year">Month Year</h3>
+                    <button id="cal-next-btn" class="calendar-nav-btn">&gt;</button>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
                     <div class="streak-count-badge">Current Streak: <span id="streak-counter">0</span></div>
                 </div>
-                <div id="streak-grid" class="calendar-grid">
-                    <!-- JavaScript will inject calendar boxes here -->
+
+                <div class="calendar-weekdays">
+                    <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+                </div>
+                
+                <div id="calendar-grid" class="calendar-grid-full">
+                    <!-- JavaScript will inject calendar cells here -->
                 </div>
             </div>
         </section>
@@ -1432,7 +1496,7 @@
                 card.innerHTML = `
                     <div class="food-card-header">
                         <h3 title="${food.name}">${food.name}</h3>
-                        <div style="display: flex; gap: 8px;">
+                        <div class="action-buttons">
                             <button class="edit-btn" onclick="window.editLibraryFood('${id}')">Edit</button>
                             <button class="delete-btn" onclick="window.deleteFood('${id}')">Delete</button>
                         </div>
@@ -1703,12 +1767,17 @@
             activeSelectedId = null;
         }
 
-        // Utility: Get YYYY-MM-DD for local timezone
+        // Core Date formatting helper to ensure perfect YYYY-MM-DD from any Date object
+        function getYYYYMMDD(dateObj) {
+            const yyyy = dateObj.getFullYear();
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Utility: Get YYYY-MM-DD for local timezone today
         function getLocalYYYYMMDD() {
-            const now = new Date();
-            const offset = now.getTimezoneOffset();
-            const localDate = new Date(now.getTime() - (offset*60*1000));
-            return localDate.toISOString().split('T')[0];
+            return getYYYYMMDD(new Date());
         }
 
         // 3. Math Engine & Save Logic
@@ -2095,11 +2164,24 @@
         }
 
         /**
-         * --- PHASE 4: DASHBOARD & GAMIFICATION LOGIC ---
+         * --- PHASE 4 & 7: DASHBOARD, CHARTS & GAMIFICATION LOGIC ---
          */
         
         let appCharts = {}; // Track chart instances globally to destroy/recreate them
         let globalActiveDateKey = getLocalYYYYMMDD(); // For the Midnight Patch
+        let currentViewDate = new Date(); // State variable for the new interactive calendar
+
+        // Initialize dynamic Calendar Navigation
+        function setupCalendarNavigation() {
+            document.getElementById('cal-prev-btn').addEventListener('click', () => {
+                currentViewDate.setMonth(currentViewDate.getMonth() - 1);
+                renderCalendar(currentViewDate);
+            });
+            document.getElementById('cal-next-btn').addEventListener('click', () => {
+                currentViewDate.setMonth(currentViewDate.getMonth() + 1);
+                renderCalendar(currentViewDate);
+            });
+        }
 
         // 1. Core Render logic
         function renderDashboard() {
@@ -2138,7 +2220,7 @@
             document.getElementById('text-fib-val').innerText = todayLog.totals.fiber || 0;
             document.getElementById('text-fib-max').innerText = `/ ${settings.maxFiber || 30}g`;
 
-            renderCalendar(state);
+            renderCalendar(currentViewDate); // Now passes the state variable date
         }
 
         // 2. ChartJS Helper
@@ -2183,31 +2265,25 @@
             });
         }
 
-        // 3. 30-Day Streak Calendar
-        function renderCalendar(state) {
+        // Helper: Calculate Streak logic independently for current real-time badge
+        function calculateAndRenderStreakBadge(state) {
             const maxCal = state.userSettings.maxCalories;
-            const targetProtein = state.userSettings.maxProtein * 0.8; // Phase 6 Requirement
             let currentStreak = 0;
             let breakFound = false;
 
-            // Step A: Calculate Streak
             for(let i=0; i<30; i++) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
-                const offset = d.getTimezoneOffset();
-                const localD = new Date(d.getTime() - (offset*60*1000));
-                const dateKey = localD.toISOString().split('T')[0];
-                
+                const dateKey = getYYYYMMDD(d);
                 const log = state.dailyLogs[dateKey];
                 
                 if (i === 0) {
                     if (!log || log.totals.calories === 0) {
-                        // Today has no entries yet, doesn't break or add to streak
-                        continue;
+                        continue; // No data yet today
                     } else if (log.totals.calories > maxCal) {
-                        breakFound = true; // Today is over limit, streak broken immediately
+                        breakFound = true; // Failed today
                     } else {
-                        currentStreak++; // Today is logged and under cal limit
+                        currentStreak++; // Succeeded today
                     }
                 } else {
                     if (!breakFound) {
@@ -2225,54 +2301,104 @@
             // Trigger Confetti on 7+ Streak!
             if (currentStreak >= 7 && !window.confettiFired) {
                 setTimeout(() => confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } }), 500);
-                window.confettiFired = true; // prevent re-firing on soft re-renders
+                window.confettiFired = true; 
+            }
+            return currentStreak;
+        }
+
+        // 3. Phase 7: Interactive Gamification Calendar Engine
+        function renderCalendar(dateObj) {
+            const state = getState();
+            const currentStreak = calculateAndRenderStreakBadge(state); // Ensure badge updates correctly
+            
+            const maxCal = state.userSettings.maxCalories;
+            const targetProtein = state.userSettings.maxProtein * 0.8;
+            
+            // Set Month/Year Title
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('calendar-month-year').innerText = `${monthNames[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+
+            // Date math variables
+            const year = dateObj.getFullYear();
+            const month = dateObj.getMonth();
+            const firstDayOfMonth = new Date(year, month, 1);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Calculate Day of Week for 1st of month (Monday = 0 ... Sunday = 6)
+            let firstDayOfWeek = firstDayOfMonth.getDay();
+            firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; 
+            
+            // Collect cells for exactly a 42 grid layout (6 weeks)
+            const prevMonthDays = firstDayOfWeek;
+            const nextMonthDays = 42 - (prevMonthDays + daysInMonth);
+            const calendarCells = [];
+            
+            // Add padding days from Previous month
+            const prevMonthLastDay = new Date(year, month, 0).getDate();
+            for (let i = prevMonthDays - 1; i >= 0; i--) {
+                calendarCells.push({ date: new Date(year, month - 1, prevMonthLastDay - i), isCurrentMonth: false });
+            }
+            
+            // Add current month days
+            for (let i = 1; i <= daysInMonth; i++) {
+                calendarCells.push({ date: new Date(year, month, i), isCurrentMonth: true });
+            }
+            
+            // Add padding days from Next month
+            for (let i = 1; i <= nextMonthDays; i++) {
+                calendarCells.push({ date: new Date(year, month + 1, i), isCurrentMonth: false });
             }
 
-            // Step B: Generate Grid visually
-            const calendarGrid = document.getElementById('streak-grid');
+            const calendarGrid = document.getElementById('calendar-grid');
             calendarGrid.innerHTML = '';
+            
+            const localTodayKey = getLocalYYYYMMDD(); // Ensure neon border matches system real-time date
 
-            // Generate past 30 days chronologically (left to right)
-            for(let i=29; i>=0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const offset = d.getTimezoneOffset();
-                const localD = new Date(d.getTime() - (offset*60*1000));
-                const dateKey = localD.toISOString().split('T')[0];
-
+            // Build grid cells and map Gamification rules
+            calendarCells.forEach(cell => {
+                const dateKey = getYYYYMMDD(cell.date);
                 const log = state.dailyLogs[dateKey];
-                const box = document.createElement('div');
-                box.className = 'calendar-day';
                 
-                // Advanced Gamification Conditions
-                if (!log || log.totals.calories === 0) {
-                    box.classList.add('empty');
-                    box.innerHTML = `<span></span>`;
-                } else if (log.totals.calories <= maxCal) {
-                    box.classList.add('success');
-                    
-                    // Condition B & C: Protein Check
-                    if (log.totals.protein >= targetProtein) {
-                        // Condition B (Perfect Day)
-                        box.innerHTML = currentStreak >= 7 ? '🏆' : '🔥';
-                    } else {
-                        // Condition C (Survived, but missed Protein)
-                        box.innerHTML = '🕯️';
-                        box.title = `${dateKey}: ${log.totals.calories} kcal (Protein goal missed)`;
+                const cellDiv = document.createElement('div');
+                cellDiv.className = 'calendar-cell';
+                if (!cell.isCurrentMonth) cellDiv.classList.add('grayed-out');
+                if (dateKey === localTodayKey) cellDiv.classList.add('today'); // Neon Border class
+                
+                const dateNum = document.createElement('span');
+                dateNum.innerText = cell.date.getDate();
+                cellDiv.appendChild(dateNum);
+
+                const overlay = document.createElement('div');
+                overlay.className = 'gamification-overlay';
+                
+                // Advanced Gamification Conditions Mapping
+                if (log && log.totals.calories > 0) {
+                    if (log.totals.calories > maxCal) {
+                        // Condition A (Failure)
+                        overlay.innerText = '❌';
+                        cellDiv.classList.add('failed');
+                    } else if (log.totals.calories <= maxCal) {
+                        cellDiv.classList.add('success');
+                        
+                        // Condition B & C: Protein Check
+                        if (log.totals.protein >= targetProtein) {
+                            // Condition B (Perfect Day)
+                            overlay.innerText = currentStreak >= 7 ? '🏆' : '🔥';
+                        } else {
+                            // Condition C (Survived, but missed Protein)
+                            overlay.innerText = '🕯️';
+                            cellDiv.title = `${dateKey}: ${log.totals.calories} kcal (Protein goal missed)`;
+                        }
                     }
-                } else {
-                    // Condition A (Failure)
-                    box.classList.add('failed');
-                    box.innerHTML = '❌';
                 }
-                
-                // Set default title if not set by protein miss
-                if(!box.title) {
-                    box.title = `${dateKey}: ${log ? log.totals.calories + ' kcal' : 'No data'}`;
+
+                if(!cellDiv.title) {
+                    cellDiv.title = `${dateKey}: ${log && log.totals.calories > 0 ? log.totals.calories + ' kcal' : 'No data'}`;
                 }
-                
-                calendarGrid.appendChild(box);
-            }
+
+                cellDiv.appendChild(overlay);
+                calendarGrid.appendChild(cellDiv);
+            });
         }
 
         // 4. The Midnight Patch (Listen for tab returning to foreground)
@@ -2296,14 +2422,17 @@
             setupLibraryForm();
             renderLibrary();
 
-            // Phase 3 Initializations
+            // Phase 3 & 5 Initializations
             setupLoggerSearch();
             setupLogModal();
             setupDailyLogDelegation();
-            setupCustomModals(); // Initialize new Modals
+            setupCustomModals();
             renderDailyLog();
 
-            // Phase 4 Initializations
+            // Phase 7 Initializations
+            setupCalendarNavigation();
+
+            // Phase 4 & 7 Initializations
             renderDashboard();
         });
 
