@@ -1098,6 +1098,110 @@
             .calendar-weekdays { font-size: 11px; }
         }
 
+        /* * Phase 9: Activity Stream Timeline Styles */
+        .timeline-container {
+            position: relative;
+            padding-left: 24px;
+            margin-top: 16px;
+        }
+
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 5px; /* Centers with the 10px dot */
+            width: 2px;
+            background: linear-gradient(180deg, var(--accent-blue) 0%, transparent 100%);
+            opacity: 0.3;
+        }
+
+        .timeline-day-group {
+            margin-bottom: 32px;
+        }
+
+        .timeline-day-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            margin-left: -12px; /* Pull header outside the timeline line slightly */
+        }
+
+        .timeline-event {
+            position: relative;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -23.5px; /* Adjust based on container padding */
+            top: 4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            box-shadow: 0 0 8px var(--text-secondary);
+        }
+
+        .timeline-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .timeline-text {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        /* Timeline Event Type Variations */
+        .timeline-event.type-food .timeline-dot {
+            background: var(--text-secondary);
+            box-shadow: 0 0 8px rgba(255,255,255,0.3);
+        }
+
+        .timeline-event.type-water .timeline-dot {
+            background: var(--accent-blue);
+            box-shadow: 0 0 12px var(--accent-blue);
+        }
+        .timeline-event.type-water .timeline-text {
+            color: var(--accent-blue);
+        }
+
+        .timeline-event.type-milestone .timeline-dot {
+            background: var(--accent-emerald);
+            box-shadow: 0 0 12px var(--accent-emerald);
+        }
+        .timeline-event.type-milestone .timeline-text {
+            color: var(--accent-emerald);
+            font-weight: 600;
+        }
+
+        /* Phase 10: History Edit & Delete States */
+        .deleted-log {
+            opacity: 0.4;
+        }
+        
+        .deleted-log .timeline-text {
+            text-decoration: line-through;
+        }
+        
+        .deleted-log .timeline-dot {
+            background: var(--text-muted) !important;
+            box-shadow: none !important;
+        }
+        
+        .edited-tag {
+            font-style: italic;
+            color: var(--text-muted);
+            margin-left: 6px;
+            font-size: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -1124,6 +1228,11 @@
             <button class="nav-item" data-tab="library">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                 Library
+            </button>
+            <!-- Phase 9: Added History Tab Button -->
+            <button class="nav-item" data-tab="history">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                History
             </button>
         </div>
     </nav>
@@ -1315,6 +1424,17 @@
             </div>
         </section>
 
+        <!-- Phase 9: History Section -->
+        <section id="history" class="tab-section hidden">
+            <h1>Activity Stream</h1>
+            <p class="subtitle">Chronological timeline of your nutrition journey.</p>
+            <div class="glass-panel">
+                <div id="history-timeline" class="timeline-container">
+                    <!-- JS will inject events here -->
+                </div>
+            </div>
+        </section>
+
     </main>
 
     <!-- Phase 3: Log Food Modal -->
@@ -1433,10 +1553,11 @@
             dailyLogs: {
                 "2023-10-27": {
                     totals: { calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1, water: 0 },
+                    activityStream: [],
+                    proteinMilestoneHit: false,
                     meals: { 
                         breakfast: [], 
                         lunch: [
-                            // Snapshot logic: Full object data stored, not just IDs
                             { id: "food_123", name: "White Rice", consumedQty: 250, calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1, logId: "log_demo123", loggedAt: "12:30 PM", baseQty: 100, baseCalories: 130, baseProtein: 2.7, baseCarbs: 28, baseFat: 0.3, baseFiber: 0.4, unit: "g" }
                         ], 
                         dinner: [], 
@@ -1462,7 +1583,7 @@
                 console.log("Local database not found. Initializing with default schema...");
                 localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(defaultState));
             } else {
-                // Parse existing DB and inject 'fiber' & 'water' wherever missing to prevent crashes
+                // Parse existing DB and inject missing fields
                 let parsed = JSON.parse(existingData);
                 
                 if (parsed.userSettings && parsed.userSettings.maxFiber === undefined) {
@@ -1475,6 +1596,10 @@
                 Object.values(parsed.dailyLogs).forEach(log => {
                     if (log.totals && log.totals.fiber === undefined) log.totals.fiber = 0;
                     if (log.totals && log.totals.water === undefined) log.totals.water = 0;
+                    
+                    if (!log.activityStream) log.activityStream = [];
+                    if (log.proteinMilestoneHit === undefined) log.proteinMilestoneHit = false;
+
                     Object.values(log.meals).forEach(mealArr => {
                         mealArr.forEach(item => {
                             if (item.fiber === undefined) item.fiber = 0;
@@ -1510,7 +1635,6 @@
 
                     // 2. Hide all sections and prepare for animation
                     tabSections.forEach(section => {
-                        // Immediately hide non-target sections
                         if (section.id !== targetId) {
                             section.classList.add('hidden');
                         }
@@ -1518,20 +1642,114 @@
 
                     // 3. Reveal the target section with animation
                     const targetSection = document.getElementById(targetId);
-                    
-                    // Remove hidden class to render it in DOM
                     targetSection.classList.remove('hidden');
-                    
-                    // Reset animation state
                     targetSection.classList.add('reveal-start');
-                    
-                    // Trigger reflow to restart CSS animation transition
                     void targetSection.offsetWidth; 
-                    
-                    // Remove start class to trigger the smooth CSS transition into place
                     targetSection.classList.remove('reveal-start');
+
+                    // Special re-render hook for the history tab
+                    if (targetId === 'history') {
+                        renderHistoryTimeline();
+                    }
                 });
             });
+        }
+
+        /**
+         * --- PHASE 9 & 10: ACTIVITY STREAM TIMELINE HELPER FUNCTIONS ---
+         */
+
+        // Appends an event to the state. Phase 10: Added refId and status logic
+        function addActivityEvent(state, dateKey, type, text, refId = null, status = 'active') {
+            if (!state.dailyLogs[dateKey].activityStream) state.dailyLogs[dateKey].activityStream = [];
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            // Phase 10 Schema Structure
+            state.dailyLogs[dateKey].activityStream.push({ time, type, text, refId, status });
+        }
+
+        // Checks and toggles the protein milestone state
+        function checkProteinMilestone(state, dateKey) {
+            const logDay = state.dailyLogs[dateKey];
+            const targetProtein = state.userSettings.maxProtein * 0.8;
+            
+            if (logDay.totals.protein >= targetProtein && !logDay.proteinMilestoneHit) {
+                logDay.proteinMilestoneHit = true;
+                // Assign a standard refId for the milestone
+                addActivityEvent(state, dateKey, 'milestone', '🎉 Milestone: Hit 80% of Daily Protein Goal!', 'milestone_protein', 'active');
+            } else if (logDay.totals.protein < targetProtein && logDay.proteinMilestoneHit) {
+                // If the user undoes or deletes logs and drops below the threshold, reset the ability to earn the milestone
+                logDay.proteinMilestoneHit = false;
+                
+                // Phase 10: Mark previous milestone event as deleted if we drop back below target
+                if (logDay.activityStream) {
+                    const ev = logDay.activityStream.find(e => e.refId === 'milestone_protein' && e.status !== 'deleted');
+                    if (ev) ev.status = 'deleted';
+                }
+            }
+        }
+
+        // Renders the chronological timeline of events
+        function renderHistoryTimeline() {
+            const state = getState();
+            const container = document.getElementById('history-timeline');
+            if (!container) return;
+
+            container.innerHTML = ''; // Reset UI
+            
+            // Sort dates descending (newest days first)
+            const dateKeys = Object.keys(state.dailyLogs).sort((a, b) => new Date(b) - new Date(a));
+            let hasEvents = false;
+
+            dateKeys.forEach(dateKey => {
+                const logDay = state.dailyLogs[dateKey];
+                
+                if (logDay.activityStream && logDay.activityStream.length > 0) {
+                    hasEvents = true;
+                    
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'timeline-day-group';
+                    
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'timeline-day-header';
+                    // Render "Today", "Yesterday", or the date
+                    const todayKey = getLocalYYYYMMDD();
+                    let headerText = dateKey;
+                    if (dateKey === todayKey) {
+                        headerText = "Today";
+                    } else {
+                        // Force local time noon to avoid UTC day-shift bugs
+                        const d = new Date(dateKey + 'T12:00:00'); 
+                        headerText = d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+                    }
+                    headerDiv.innerText = headerText;
+                    groupDiv.appendChild(headerDiv);
+
+                    // Reverse events to show newest at top
+                    const events = [...logDay.activityStream].reverse();
+                    
+                    events.forEach(ev => {
+                        // Phase 10: Apply CSS classes and tags based on event status
+                        const statusClass = ev.status === 'deleted' ? 'deleted-log' : '';
+                        const editedTag = ev.status === 'edited' ? '<span class="edited-tag">(edited)</span>' : '';
+                        
+                        const eventDiv = document.createElement('div');
+                        eventDiv.className = `timeline-event type-${ev.type} ${statusClass}`;
+                        eventDiv.innerHTML = `
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-time">${ev.time}${editedTag}</div>
+                            <div class="timeline-text">${ev.text}</div>
+                        `;
+                        groupDiv.appendChild(eventDiv);
+                    });
+                    
+                    container.appendChild(groupDiv);
+                }
+            });
+
+            if (!hasEvents) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">No activity recorded yet. Start logging to build your stream!</p>';
+            }
         }
 
         /**
@@ -1759,7 +1977,7 @@
             // 2. Recalculate Today's Totals from Scratch
             // We wipe the slate clean and add everything up again to guarantee 100% precision.
             if (needsRecalculation) {
-                let newTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+                let newTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: todayLog.totals.water || 0 };
                 
                 categories.forEach(category => {
                     if (todayLog.meals[category]) {
@@ -1774,11 +1992,16 @@
                 });
                 
                 todayLog.totals = newTotals;
+                
+                // Milestone Check Integration
+                checkProteinMilestone(state, dateKey);
+                
                 saveState(state);
                 
                 // 3. Immediately reflect new calculations in the UI
                 renderDailyLog();
                 renderDashboard();
+                renderHistoryTimeline();
             }
         }
 
@@ -1953,7 +2176,9 @@
             // Initialize today's structure if it doesn't exist
             if (!state.dailyLogs[dateKey]) {
                 state.dailyLogs[dateKey] = {
-                    totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+                    totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 },
+                    activityStream: [],
+                    proteinMilestoneHit: false,
                     meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
                 };
             }
@@ -1973,12 +2198,20 @@
             totals.fat = Math.round((totals.fat + loggedFat) * 10) / 10;
             totals.fiber = Math.round((totals.fiber + loggedFiber) * 10) / 10;
 
+            // 3. Phase 9 & 10 Integration: Activity Logging with strict logId reference
+            const displayUnitText = activeSelectedFood.baseUnit === 'item' ? 'items' : activeSelectedFood.baseUnit;
+            const categoryText = selectedMealCategory.charAt(0).toUpperCase() + selectedMealCategory.slice(1);
+            addActivityEvent(state, dateKey, 'food', `Logged ${consumedQty}${displayUnitText} ${activeSelectedFood.name} for ${categoryText}`, foodSnapshot.logId, 'active');
+            
+            checkProteinMilestone(state, dateKey);
+
             // Save back to DB
             saveState(state);
 
             // Update UI
             renderDailyLog();
             renderDashboard();
+            renderHistoryTimeline();
 
             // --- UI FEEDBACK ---
             const confirmBtn = document.getElementById('btn-confirm-log');
@@ -2188,11 +2421,22 @@
             // 2. Remove the item using .filter() as requested
             logDay.meals[category] = itemsArray.filter(i => i.logId !== logId);
 
+            // Phase 10 Integration: Mutate existing activity stream event to deleted instead of pushing a new event
+            if (logDay.activityStream) {
+                // Find the event specifically linked to this deleted log and flag it
+                const event = logDay.activityStream.find(ev => ev.refId === logId);
+                if (event) event.status = 'deleted';
+            }
+
+            // Phase 9 Integration: Check if deletion removed milestone
+            checkProteinMilestone(state, dateKey);
+
             // 3. Save, hide modal, and re-render updates
             saveState(state);
             closeCustomModals();
             renderDailyLog();
             renderDashboard(); // Synchronizes the macro rings
+            renderHistoryTimeline();
         }
 
         // Open Edit Modal
@@ -2281,11 +2525,28 @@
             logDay.totals.fat = Math.round((logDay.totals.fat + newFat) * 10) / 10;
             logDay.totals.fiber = Math.round((logDay.totals.fiber + newFib) * 10) / 10;
 
+            // Phase 10 Integration: Mutate existing activity stream event to 'edited' state
+            if (logDay.activityStream) {
+                const event = logDay.activityStream.find(ev => ev.refId === logId);
+                if (event) {
+                    const displayUnitText = item.unit === 'item' ? 'items' : item.unit;
+                    const categoryText = category.charAt(0).toUpperCase() + category.slice(1);
+                    
+                    // Update text reflecting new amount and change status
+                    event.text = `Logged ${newQty}${displayUnitText} ${item.name} for ${categoryText}`;
+                    event.status = 'edited';
+                }
+            }
+
+            // Phase 9 Integration: Verify if milestone needs to toggle
+            checkProteinMilestone(state, dateKey);
+
             // 5. Save, close modal, and re-render
             saveState(state);
             closeCustomModals();
             renderDailyLog();
             renderDashboard(); // Synchronizes the macro rings
+            renderHistoryTimeline();
         }
 
         /**
@@ -2433,6 +2694,8 @@
                 if (!state.dailyLogs[dateKey]) {
                     state.dailyLogs[dateKey] = {
                         totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 },
+                        activityStream: [],
+                        proteinMilestoneHit: false,
                         meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
                     };
                 }
@@ -2442,17 +2705,37 @@
 
                 const currentWater = state.dailyLogs[dateKey].totals.water;
 
-                // Smart Toggle Logic
+                // Smart Toggle Logic & Phase 10 Event Mutation
+                const stream = state.dailyLogs[dateKey].activityStream || [];
+
                 if (clickedIdx === currentWater) {
                     // Clicked the last full bottle -> Undo 1
                     state.dailyLogs[dateKey].totals.water = currentWater - 1;
+                    
+                    // Phase 10: Find exact active water event matching this index and mark deleted
+                    const ev = stream.find(e => e.refId === `water_${currentWater}` && e.status !== 'deleted');
+                    if (ev) ev.status = 'deleted';
+                    
                 } else {
                     // Clicked an empty bottle OR a full bottle prior to the last one -> Fill/Drop to that index
+                    const waterDiff = clickedIdx - currentWater;
+                    
+                    if (waterDiff > 0) {
+                        // Phase 10: Push new water event with explicit refId based on the newly filled index
+                        addActivityEvent(state, dateKey, 'water', `Drank ${waterDiff}L of Water (Total: ${clickedIdx}L)`, `water_${clickedIdx}`, 'active');
+                    } else if (waterDiff < 0) {
+                        // Dropping water count (undoing multiple bottles at once)
+                        for (let w = currentWater; w > clickedIdx; w--) {
+                            const ev = stream.find(e => e.refId === `water_${w}` && e.status !== 'deleted');
+                            if (ev) ev.status = 'deleted';
+                        }
+                    }
                     state.dailyLogs[dateKey].totals.water = clickedIdx;
                 }
 
                 saveState(state);
                 renderWaterTracker(); // Instantly update visually
+                renderHistoryTimeline();
             });
         }
 
@@ -2626,6 +2909,9 @@
 
             // Phase 7 Initializations
             setupCalendarNavigation();
+            
+            // Phase 9 Initializations
+            renderHistoryTimeline();
 
             // Phase 4 & 7 & 8 Initializations
             renderDashboard();
