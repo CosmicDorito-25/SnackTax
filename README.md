@@ -9,7 +9,7 @@ Just open the file and start logging what you ate.
 
 ---
 
-## why this exists
+## Why this exists
 
 Because most calorie trackers:
 - want your email
@@ -23,7 +23,7 @@ It just quietly keeps score.
 
 ---
 
-## features
+## Features
 
 - single HTML file (yes, really)
 - works completely offline
@@ -39,7 +39,7 @@ It just quietly keeps score.
 
 ---
 
-## how to use
+## How to use
 
 1. download `index.html`
 2. open it in your browser
@@ -49,7 +49,7 @@ that’s it. no setup. no build step. no nonsense.
 
 ---
 
-## philosophy
+## Philosophy
 
 - if it needs a backend, it's already too much
 - if it needs login, it's definitely too much
@@ -60,7 +60,7 @@ SnackTax is designed to be:
 
 ---
 
-## privacy
+## Privacy
 
 your data:
 - is stored locally in your browser
@@ -72,27 +72,27 @@ this is the price of freedom.
 
 ---
 
-## limitations
+## Limitations
 
 - no sync across devices
 - no fancy analytics
-- no reminders to stop eating
+- no reminders to stop eating (we are instead using human in-built notification system known as 'Guilt')
 
 it will not fix your diet.  
 it will just document it.
 
 ---
 
-## license
+## License
 
 GPL v3
 
 if you modify and share it, you must keep it open source.  
-no turning SnackTax into a paid “premium calorie ecosystem”.
+no turning SnackTax into a paid “premium calinto a single HTML file. No account, no cloud, no sync, no drama — just a fast privacy-first meal log for tracking calories, meals, and daily intake offline.orie ecosystem”.
 
 ---
 
-## contributions
+## Contributions
 
 PRs are welcome, but keep it:
 - simple
@@ -103,14 +103,14 @@ if it adds complexity, it probably doesn’t belong.
 
 ---
 
-## name explanation
+## Name explanation 
 
 every snack has a cost.  
 this just keeps the receipts.
 
 ---
 
-## disclaimer
+## Disclaimer
 
 SnackTax does not judge you.  
-the numbers might.
+the numbers might 👀.
