@@ -967,6 +967,7 @@
             border-radius: var(--radius-lg);
             padding: 32px;
             backdrop-filter: blur(12px);
+            position: relative; /* For the banner */
         }
 
         .calendar-header {
@@ -1049,7 +1050,12 @@
             overflow: hidden; /* Stop massive emojis from overflowing */
             transition: all var(--transition-smooth);
             color: var(--text-secondary);
-            cursor: default;
+            cursor: pointer; /* Phase 12: Interactive */
+        }
+
+        .calendar-cell:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 240, 255, 0.3);
         }
 
         .calendar-cell .date-num {
@@ -1172,13 +1178,47 @@
             color: var(--accent-blue);
         }
 
-        .timeline-event.type-milestone .timeline-dot {
-            background: var(--accent-emerald);
+        /* Phase 11: Milestone Visual Flair CSS */
+        .timeline-event.type-milestone.ref-cal50 .timeline-dot,
+        .timeline-event.type-milestone.ref-cal80 .timeline-dot,
+        .timeline-event.type-milestone.ref-cal100 .timeline-dot {
+            background: #ffb84d; /* Glowing yellow/orange */
+            box-shadow: 0 0 12px #ffb84d;
+        }
+        .timeline-event.type-milestone.ref-cal50 .timeline-text,
+        .timeline-event.type-milestone.ref-cal80 .timeline-text,
+        .timeline-event.type-milestone.ref-cal100 .timeline-text {
+            color: #ffb84d;
+            font-weight: 600;
+        }
+        
+        .timeline-event.type-milestone.ref-pro80 .timeline-dot,
+        .timeline-event.type-milestone.ref-pro100 .timeline-dot {
+            background: var(--accent-emerald); /* Glowing green */
             box-shadow: 0 0 12px var(--accent-emerald);
         }
-        .timeline-event.type-milestone .timeline-text {
+        .timeline-event.type-milestone.ref-pro80 .timeline-text,
+        .timeline-event.type-milestone.ref-pro100 .timeline-text {
             color: var(--accent-emerald);
             font-weight: 600;
+        }
+
+        .timeline-event.type-milestone.ref-waterCompleted .timeline-dot {
+            background: var(--accent-blue); /* Glowing blue */
+            box-shadow: 0 0 12px var(--accent-blue);
+        }
+        .timeline-event.type-milestone.ref-waterCompleted .timeline-text {
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .timeline-event.type-milestone.ref-calExceeded .timeline-dot {
+            background: #ff4444; /* Aggressive red */
+            box-shadow: 0 0 12px #ff4444;
+        }
+        .timeline-event.type-milestone.ref-calExceeded .timeline-text {
+            color: #ff4444;
+            font-weight: 700;
         }
 
         /* Phase 10: History Edit & Delete States */
@@ -1200,6 +1240,25 @@
             color: var(--text-muted);
             margin-left: 6px;
             font-size: 10px;
+        }
+
+        /* Phase 12: Historical View Styles */
+        .glass-banner {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--accent-blue);
+            color: var(--accent-blue);
+            padding: 16px;
+            border-radius: var(--radius-md);
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 24px;
+            backdrop-filter: blur(12px);
+            animation: slideDown 0.3s ease-out forwards;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
     </style>
@@ -1316,6 +1375,9 @@
 
             <!-- Phase 7: Full Interactive Calendar -->
             <div class="streak-section">
+                <!-- Phase 12: Select Date Banner -->
+                <div id="select-date-banner" class="glass-banner hidden">Choose a date to view its history.</div>
+                
                 <div class="calendar-header">
                     <button id="cal-prev-btn" class="calendar-nav-btn">&lt;</button>
                     <h3 id="calendar-month-year" class="calendar-month-year">Month Year</h3>
@@ -1424,13 +1486,73 @@
             </div>
         </section>
 
-        <!-- Phase 9: History Section -->
+        <!-- Phase 9 & 12: History Section -->
         <section id="history" class="tab-section hidden">
-            <h1>Activity Stream</h1>
-            <p class="subtitle">Chronological timeline of your nutrition journey.</p>
-            <div class="glass-panel">
-                <div id="history-timeline" class="timeline-container">
-                    <!-- JS will inject events here -->
+            
+            <div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                <button id="btn-view-past-data" class="btn-secondary" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="openSelectDateMode()">View Past Data</button>
+                <button id="btn-close-history" class="btn-secondary hidden" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="closeHistoricalView()">Back to Activity Stream</button>
+            </div>
+
+            <!-- Phase 12: Read-Only Historical View Container -->
+            <div id="historical-view-container" class="hidden">
+                <h1 id="hist-date-title">Data for ...</h1>
+                <p class="subtitle" style="margin-bottom: 24px;">A read-only snapshot of your past performance.</p>
+                
+                <div id="hist-content">
+                    <div class="dashboard-charts">
+                        <div class="chart-card">
+                            <div class="chart-title">Calories</div>
+                            <div class="chart-wrapper"><canvas id="hist-calChart"></canvas>
+                                <div class="chart-center-text"><span class="val" id="hist-cal-val">0</span><span class="lbl" id="hist-cal-max">/ 0</span></div>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-title" style="color: var(--accent-emerald);">Protein</div>
+                            <div class="chart-wrapper"><canvas id="hist-proChart"></canvas>
+                                <div class="chart-center-text"><span class="val" id="hist-pro-val">0</span><span class="lbl" id="hist-pro-max">/ 0</span></div>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-title" style="color: var(--accent-violet);">Carbs</div>
+                            <div class="chart-wrapper"><canvas id="hist-carbChart"></canvas>
+                                <div class="chart-center-text"><span class="val" id="hist-carb-val">0</span><span class="lbl" id="hist-carb-max">/ 0</span></div>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-title" style="color: #ff9900;">Fat</div>
+                            <div class="chart-wrapper"><canvas id="hist-fatChart"></canvas>
+                                <div class="chart-center-text"><span class="val" id="hist-fat-val">0</span><span class="lbl" id="hist-fat-max">/ 0</span></div>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <div class="chart-title" style="color: var(--accent-pink);">Fiber</div>
+                            <div class="chart-wrapper"><canvas id="hist-fibChart"></canvas>
+                                <div class="chart-center-text"><span class="val" id="hist-fib-val">0</span><span class="lbl" id="hist-fib-max">/ 0</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="water-section">
+                        <h2>Hydration</h2>
+                        <div id="hist-water-container" class="water-grid"></div>
+                    </div>
+
+                    <div class="daily-log-section">
+                        <h2>Meal Log</h2>
+                        <div id="hist-log-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 9: Activity Stream Timeline Container -->
+            <div id="activity-stream-container">
+                <h1>Activity Stream</h1>
+                <p class="subtitle">Chronological timeline of your nutrition journey.</p>
+                <div class="glass-panel">
+                    <div id="history-timeline" class="timeline-container">
+                        <!-- JS will inject events here -->
+                    </div>
                 </div>
             </div>
         </section>
@@ -1554,7 +1676,7 @@
                 "2023-10-27": {
                     totals: { calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1, water: 0 },
                     activityStream: [],
-                    proteinMilestoneHit: false,
+                    milestones: { cal50: false, cal80: false, cal100: false, calExceeded: false, pro80: false, pro100: false, waterCompleted: false },
                     meals: { 
                         breakfast: [], 
                         lunch: [
@@ -1598,7 +1720,14 @@
                     if (log.totals && log.totals.water === undefined) log.totals.water = 0;
                     
                     if (!log.activityStream) log.activityStream = [];
-                    if (log.proteinMilestoneHit === undefined) log.proteinMilestoneHit = false;
+                    
+                    // Phase 11 Initialization: Wipe old schema tracking entirely and inject new milestones object
+                    if (log.proteinMilestoneHit !== undefined) {
+                        delete log.proteinMilestoneHit; 
+                    }
+                    if (!log.milestones) {
+                        log.milestones = { cal50: false, cal80: false, cal100: false, calExceeded: false, pro80: false, pro100: false, waterCompleted: false };
+                    }
 
                     Object.values(log.meals).forEach(mealArr => {
                         mealArr.forEach(item => {
@@ -1656,7 +1785,7 @@
         }
 
         /**
-         * --- PHASE 9 & 10: ACTIVITY STREAM TIMELINE HELPER FUNCTIONS ---
+         * --- PHASE 9, 10 & 11: ACTIVITY STREAM & MILESTONE ENGINE ---
          */
 
         // Appends an event to the state. Phase 10: Added refId and status logic
@@ -1668,24 +1797,98 @@
             state.dailyLogs[dateKey].activityStream.push({ time, type, text, refId, status });
         }
 
-        // Checks and toggles the protein milestone state
-        function checkProteinMilestone(state, dateKey) {
+        // Phase 11: Milestone Helper - Pushes a visual milestone event directly into the stream
+        function pushMilestoneEvent(state, dateKey, milestoneId, text) {
+            addActivityEvent(state, dateKey, 'milestone', text, milestoneId, 'active');
+        }
+
+        // Phase 11: Milestone Helper - Marks an existing milestone as deleted if the user falls backwards
+        function revokeMilestoneEvent(state, dateKey, milestoneId) {
             const logDay = state.dailyLogs[dateKey];
-            const targetProtein = state.userSettings.maxProtein * 0.8;
+            if (logDay && logDay.activityStream) {
+                const ev = logDay.activityStream.find(e => e.refId === milestoneId && e.status !== 'deleted');
+                if (ev) ev.status = 'deleted';
+            }
+        }
+
+        // Phase 11: The Centralized Evaluation Engine
+        // This is called instantly after ANY mutation of the daily totals.
+        function evaluateMilestones(state, dateKey) {
+            const logDay = state.dailyLogs[dateKey];
+            if (!logDay) return;
             
-            if (logDay.totals.protein >= targetProtein && !logDay.proteinMilestoneHit) {
-                logDay.proteinMilestoneHit = true;
-                // Assign a standard refId for the milestone
-                addActivityEvent(state, dateKey, 'milestone', '🎉 Milestone: Hit 80% of Daily Protein Goal!', 'milestone_protein', 'active');
-            } else if (logDay.totals.protein < targetProtein && logDay.proteinMilestoneHit) {
-                // If the user undoes or deletes logs and drops below the threshold, reset the ability to earn the milestone
-                logDay.proteinMilestoneHit = false;
-                
-                // Phase 10: Mark previous milestone event as deleted if we drop back below target
-                if (logDay.activityStream) {
-                    const ev = logDay.activityStream.find(e => e.refId === 'milestone_protein' && e.status !== 'deleted');
-                    if (ev) ev.status = 'deleted';
-                }
+            const settings = state.userSettings;
+            const totals = logDay.totals;
+            const ms = logDay.milestones;
+
+            const calPct = totals.calories / settings.maxCalories;
+            const proPct = totals.protein / settings.maxProtein;
+
+            // --- Calories ---
+            
+            // 50% Calories
+            if (calPct >= 0.5 && calPct < 0.8 && !ms.cal50) {
+                ms.cal50 = true;
+                pushMilestoneEvent(state, dateKey, 'cal50', "🔥 Milestone: Reached 50% of Daily Calories!");
+            } else if (calPct < 0.5 && ms.cal50) {
+                ms.cal50 = false;
+                revokeMilestoneEvent(state, dateKey, 'cal50');
+            }
+
+            // 80% Calories
+            if (calPct >= 0.8 && calPct < 1.0 && !ms.cal80) {
+                ms.cal80 = true;
+                pushMilestoneEvent(state, dateKey, 'cal80', "🔥 Milestone: Reached 80% of Daily Calories!");
+            } else if (calPct < 0.8 && ms.cal80) {
+                ms.cal80 = false;
+                revokeMilestoneEvent(state, dateKey, 'cal80');
+            }
+
+            // 100% Calories (We use exact strict total matching since floated numbers can be fickle)
+            if (totals.calories === settings.maxCalories && !ms.cal100) {
+                ms.cal100 = true;
+                pushMilestoneEvent(state, dateKey, 'cal100', "🎯 Perfect: Hit exactly 100% of Daily Calories!");
+            } else if (totals.calories !== settings.maxCalories && ms.cal100) {
+                ms.cal100 = false;
+                revokeMilestoneEvent(state, dateKey, 'cal100');
+            }
+
+            // Calories Exceeded
+            if (totals.calories > settings.maxCalories && !ms.calExceeded) {
+                ms.calExceeded = true;
+                pushMilestoneEvent(state, dateKey, 'calExceeded', "⚠️ Warning: Exceeded Daily Calories Limit!");
+            } else if (totals.calories <= settings.maxCalories && ms.calExceeded) {
+                ms.calExceeded = false;
+                revokeMilestoneEvent(state, dateKey, 'calExceeded');
+            }
+
+            // --- Protein ---
+
+            // 80% Protein
+            if (proPct >= 0.8 && proPct < 1.0 && !ms.pro80) {
+                ms.pro80 = true;
+                pushMilestoneEvent(state, dateKey, 'pro80', "🎉 Milestone: Hit 80% of Daily Protein Goal!");
+            } else if (proPct < 0.8 && ms.pro80) {
+                ms.pro80 = false;
+                revokeMilestoneEvent(state, dateKey, 'pro80');
+            }
+
+            // 100% Protein
+            if (proPct >= 1.0 && !ms.pro100) {
+                ms.pro100 = true;
+                pushMilestoneEvent(state, dateKey, 'pro100', "💪 Awesome: Crushed 100% of Daily Protein Goal!");
+            } else if (proPct < 1.0 && ms.pro100) {
+                ms.pro100 = false;
+                revokeMilestoneEvent(state, dateKey, 'pro100');
+            }
+
+            // --- Water ---
+            if (totals.water >= settings.targetWater && !ms.waterCompleted) {
+                ms.waterCompleted = true;
+                pushMilestoneEvent(state, dateKey, 'waterCompleted', "💧 Hydrated: Reached Daily Water Target!");
+            } else if (totals.water < settings.targetWater && ms.waterCompleted) {
+                ms.waterCompleted = false;
+                revokeMilestoneEvent(state, dateKey, 'waterCompleted');
             }
         }
 
@@ -1733,8 +1936,11 @@
                         const statusClass = ev.status === 'deleted' ? 'deleted-log' : '';
                         const editedTag = ev.status === 'edited' ? '<span class="edited-tag">(edited)</span>' : '';
                         
+                        // Phase 11: Add the specific refId class for milestone visual targeting
+                        const refClass = ev.refId ? `ref-${ev.refId}` : '';
+                        
                         const eventDiv = document.createElement('div');
-                        eventDiv.className = `timeline-event type-${ev.type} ${statusClass}`;
+                        eventDiv.className = `timeline-event type-${ev.type} ${statusClass} ${refClass}`;
                         eventDiv.innerHTML = `
                             <div class="timeline-dot"></div>
                             <div class="timeline-time">${ev.time}${editedTag}</div>
@@ -1993,8 +2199,8 @@
                 
                 todayLog.totals = newTotals;
                 
-                // Milestone Check Integration
-                checkProteinMilestone(state, dateKey);
+                // Phase 11: Execute Milestone Checks instantly
+                evaluateMilestones(state, dateKey);
                 
                 saveState(state);
                 
@@ -2178,7 +2384,7 @@
                 state.dailyLogs[dateKey] = {
                     totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 },
                     activityStream: [],
-                    proteinMilestoneHit: false,
+                    milestones: { cal50: false, cal80: false, cal100: false, calExceeded: false, pro80: false, pro100: false, waterCompleted: false },
                     meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
                 };
             }
@@ -2203,7 +2409,8 @@
             const categoryText = selectedMealCategory.charAt(0).toUpperCase() + selectedMealCategory.slice(1);
             addActivityEvent(state, dateKey, 'food', `Logged ${consumedQty}${displayUnitText} ${activeSelectedFood.name} for ${categoryText}`, foodSnapshot.logId, 'active');
             
-            checkProteinMilestone(state, dateKey);
+            // Phase 11: Execute Milestone Checks instantly
+            evaluateMilestones(state, dateKey);
 
             // Save back to DB
             saveState(state);
@@ -2428,8 +2635,8 @@
                 if (event) event.status = 'deleted';
             }
 
-            // Phase 9 Integration: Check if deletion removed milestone
-            checkProteinMilestone(state, dateKey);
+            // Phase 11: Execute Milestone Checks instantly
+            evaluateMilestones(state, dateKey);
 
             // 3. Save, hide modal, and re-render updates
             saveState(state);
@@ -2538,8 +2745,8 @@
                 }
             }
 
-            // Phase 9 Integration: Verify if milestone needs to toggle
-            checkProteinMilestone(state, dateKey);
+            // Phase 11: Execute Milestone Checks instantly
+            evaluateMilestones(state, dateKey);
 
             // 5. Save, close modal, and re-render
             saveState(state);
@@ -2554,6 +2761,7 @@
          */
         
         let appCharts = {}; // Track chart instances globally to destroy/recreate them
+        let histCharts = {}; // Phase 12: Track historical chart instances
         let globalActiveDateKey = getLocalYYYYMMDD(); // For the Midnight Patch
         let currentViewDate = new Date(); // State variable for the new interactive calendar
 
@@ -2567,6 +2775,17 @@
                 currentViewDate.setMonth(currentViewDate.getMonth() + 1);
                 renderCalendar(currentViewDate);
             });
+            
+            // Phase 12: Calendar Click Delegation
+            const grid = document.getElementById('calendar-grid');
+            if (grid) {
+                grid.addEventListener('click', (e) => {
+                    const cell = e.target.closest('.calendar-cell');
+                    if (!cell) return;
+                    const dateKey = cell.dataset.date;
+                    if (dateKey) viewHistoricalDate(dateKey);
+                });
+            }
         }
 
         // 1. Core Render logic
@@ -2584,11 +2803,11 @@
             }
 
             // Create/Update Rings
-            createRingChart('calChart', todayLog.totals.calories, settings.maxCalories, '--accent-blue');
-            createRingChart('proChart', todayLog.totals.protein, settings.maxProtein, '--accent-emerald');
-            createRingChart('carbChart', todayLog.totals.carbs, settings.maxCarbs, '--accent-violet');
-            createRingChart('fatChart', todayLog.totals.fat, settings.maxFat, '#ff9900', true); // raw hex fallback
-            createRingChart('fibChart', todayLog.totals.fiber || 0, settings.maxFiber || 30, '--accent-pink'); // Fiber Ring
+            createRingChart('calChart', todayLog.totals.calories, settings.maxCalories, '--accent-blue', false, appCharts);
+            createRingChart('proChart', todayLog.totals.protein, settings.maxProtein, '--accent-emerald', false, appCharts);
+            createRingChart('carbChart', todayLog.totals.carbs, settings.maxCarbs, '--accent-violet', false, appCharts);
+            createRingChart('fatChart', todayLog.totals.fat, settings.maxFat, '#ff9900', true, appCharts); // raw hex fallback
+            createRingChart('fibChart', todayLog.totals.fiber || 0, settings.maxFiber || 30, '--accent-pink', false, appCharts); // Fiber Ring
 
             // Update Center Texts
             document.getElementById('text-cal-val').innerText = Math.round(todayLog.totals.calories);
@@ -2610,8 +2829,8 @@
             renderCalendar(currentViewDate); // Now passes the state variable date
         }
 
-        // 2. ChartJS Helper
-        function createRingChart(canvasId, currentValue, maxValue, cssVarName, isRawColor = false) {
+        // 2. ChartJS Helper (Phase 12 Update: Accepts dictionary to support historical charts)
+        function createRingChart(canvasId, currentValue, maxValue, cssVarName, isRawColor = false, chartDict = appCharts) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
 
@@ -2621,14 +2840,14 @@
             const emptyColor = 'rgba(255, 255, 255, 0.05)';
 
             // Destroy previous instance
-            if (appCharts[canvasId]) {
-                appCharts[canvasId].destroy();
+            if (chartDict[canvasId]) {
+                chartDict[canvasId].destroy();
             }
 
             const safeValue = Math.min(currentValue, maxValue);
             const remainder = Math.max(maxValue - currentValue, 0);
 
-            appCharts[canvasId] = new Chart(canvas.getContext('2d'), {
+            chartDict[canvasId] = new Chart(canvas.getContext('2d'), {
                 type: 'doughnut',
                 data: {
                     labels: ['Logged', 'Remaining'],
@@ -2695,7 +2914,7 @@
                     state.dailyLogs[dateKey] = {
                         totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 },
                         activityStream: [],
-                        proteinMilestoneHit: false,
+                        milestones: { cal50: false, cal80: false, cal100: false, calExceeded: false, pro80: false, pro100: false, waterCompleted: false },
                         meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
                     };
                 }
@@ -2732,6 +2951,9 @@
                     }
                     state.dailyLogs[dateKey].totals.water = clickedIdx;
                 }
+
+                // Phase 11: Execute Milestone Checks instantly
+                evaluateMilestones(state, dateKey);
 
                 saveState(state);
                 renderWaterTracker(); // Instantly update visually
@@ -2838,6 +3060,9 @@
                 if (!cell.isCurrentMonth) cellDiv.classList.add('grayed-out');
                 if (dateKey === localTodayKey) cellDiv.classList.add('today'); // Neon Border class
                 
+                // Phase 12: Attach dateKey to the element for interactive clicking
+                cellDiv.dataset.date = dateKey;
+
                 const dateNum = document.createElement('span');
                 dateNum.className = 'date-num'; // Add class for absolute z-indexing
                 dateNum.innerText = cell.date.getDate();
@@ -2876,6 +3101,157 @@
             });
         }
 
+        /**
+         * --- PHASE 12: HISTORICAL VIEW ENGINE ---
+         */
+
+        window.openSelectDateMode = function() {
+            // Switch to Dashboard Tab instantly
+            document.querySelector('[data-tab="dashboard"]').click();
+            
+            // Show temporary banner
+            const banner = document.getElementById('select-date-banner');
+            banner.classList.remove('hidden');
+            
+            // Optional: Hide it after 5 seconds to avoid clutter if they ignore it
+            setTimeout(() => {
+                banner.classList.add('hidden');
+            }, 5000);
+        };
+
+        window.closeHistoricalView = function() {
+            document.getElementById('historical-view-container').classList.add('hidden');
+            document.getElementById('activity-stream-container').classList.remove('hidden');
+            document.getElementById('btn-view-past-data').classList.remove('hidden');
+            document.getElementById('btn-close-history').classList.add('hidden');
+        };
+
+        window.viewHistoricalDate = function(dateKey) {
+            // Hide the banner if active
+            document.getElementById('select-date-banner').classList.add('hidden');
+            
+            // Instantly switch the active tab back to History
+            document.querySelector('[data-tab="history"]').click();
+            
+            // Render the specific historical view
+            renderHistoricalView(dateKey);
+        };
+
+        function renderHistoricalView(dateKey) {
+            // Toggle container visibility
+            document.getElementById('historical-view-container').classList.remove('hidden');
+            document.getElementById('activity-stream-container').classList.add('hidden');
+            document.getElementById('btn-view-past-data').classList.add('hidden');
+            document.getElementById('btn-close-history').classList.remove('hidden');
+
+            const state = getState();
+            const logDay = state.dailyLogs[dateKey];
+            const settings = state.userSettings;
+
+            // Format date string beautifully (Force local time to noon to avoid UTC day-shift bugs)
+            const d = new Date(dateKey + 'T12:00:00');
+            document.getElementById('hist-date-title').innerText = `Data for ${d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`;
+
+            const contentContainer = document.getElementById('hist-content');
+
+            // Handle Empty State
+            if (!logDay || logDay.totals.calories === 0) {
+                contentContainer.style.display = 'none'; // Hide all charts/data
+                
+                // Add or locate an empty state message
+                let emptyMsg = document.getElementById('hist-empty-msg');
+                if (!emptyMsg) {
+                    emptyMsg = document.createElement('p');
+                    emptyMsg.id = 'hist-empty-msg';
+                    emptyMsg.style.color = 'var(--text-muted)';
+                    document.getElementById('historical-view-container').appendChild(emptyMsg);
+                }
+                emptyMsg.innerText = "No data recorded for this date.";
+                emptyMsg.style.display = 'block';
+                return;
+            }
+
+            // Restore content visibility if returning from empty state
+            contentContainer.style.display = 'block';
+            const emptyMsg = document.getElementById('hist-empty-msg');
+            if (emptyMsg) emptyMsg.style.display = 'none';
+
+            // 1. Render Read-Only Macro Rings
+            createRingChart('hist-calChart', logDay.totals.calories, settings.maxCalories, '--accent-blue', false, histCharts);
+            createRingChart('hist-proChart', logDay.totals.protein, settings.maxProtein, '--accent-emerald', false, histCharts);
+            createRingChart('hist-carbChart', logDay.totals.carbs, settings.maxCarbs, '--accent-violet', false, histCharts);
+            createRingChart('hist-fatChart', logDay.totals.fat, settings.maxFat, '#ff9900', true, histCharts);
+            createRingChart('hist-fibChart', logDay.totals.fiber || 0, settings.maxFiber || 30, '--accent-pink', false, histCharts);
+
+            document.getElementById('hist-cal-val').innerText = Math.round(logDay.totals.calories);
+            document.getElementById('hist-cal-max').innerText = `/ ${settings.maxCalories} kcal`;
+            document.getElementById('hist-pro-val').innerText = logDay.totals.protein;
+            document.getElementById('hist-pro-max').innerText = `/ ${settings.maxProtein}g`;
+            document.getElementById('hist-carb-val').innerText = logDay.totals.carbs;
+            document.getElementById('hist-carb-max').innerText = `/ ${settings.maxCarbs}g`;
+            document.getElementById('hist-fat-val').innerText = logDay.totals.fat;
+            document.getElementById('hist-fat-max').innerText = `/ ${settings.maxFat}g`;
+            document.getElementById('hist-fib-val').innerText = logDay.totals.fiber || 0;
+            document.getElementById('hist-fib-max').innerText = `/ ${settings.maxFiber || 30}g`;
+
+            // 2. Render Read-Only Hydration
+            const waterContainer = document.getElementById('hist-water-container');
+            waterContainer.innerHTML = ''; 
+            const targetWater = settings.targetWater || 4;
+            const currentWater = logDay.totals.water || 0;
+            const totalRendered = Math.max(targetWater, currentWater);
+
+            for (let i = 1; i <= totalRendered; i++) {
+                const bottle = document.createElement('div');
+                bottle.className = `water-bottle ${i <= currentWater ? 'full' : ''}`;
+                bottle.style.cursor = 'default'; // Override pointer
+                waterContainer.appendChild(bottle);
+            }
+
+            // 3. Render Read-Only Meal Log
+            const mealContainer = document.getElementById('hist-log-container');
+            mealContainer.innerHTML = '';
+            const categories = ['breakfast', 'lunch', 'snack', 'dinner', 'miscellaneous'];
+            let hasMeals = false;
+
+            categories.forEach(category => {
+                const items = logDay.meals[category];
+                if (items && items.length > 0) {
+                    hasMeals = true;
+                    const block = document.createElement('div');
+                    block.className = 'log-category-block';
+                    block.innerHTML = `<div class="log-category-header">${category}</div>`;
+
+                    items.forEach(item => {
+                        const displayUnit = item.unit === 'item' ? 'items' : 'g';
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'log-item';
+                        
+                        // Strict read-only rendering, excluding the Action Buttons div entirely
+                        itemEl.innerHTML = `
+                            <div class="log-item-details">
+                                <h4>${item.name}</h4>
+                                <div class="log-item-meta">
+                                    <span class="timestamp">${item.loggedAt || 'Historical'}</span>
+                                    <span>${item.consumedQty} ${displayUnit}</span>
+                                </div>
+                                <div class="log-item-macros">
+                                    ${item.calories} kcal <span>|</span> ${item.protein}g P <span>|</span> ${item.carbs}g C <span>|</span> ${item.fat}g F <span>|</span> ${item.fiber || 0}g Fib
+                                </div>
+                            </div>
+                        `;
+                        block.appendChild(itemEl);
+                    });
+                    mealContainer.appendChild(block);
+                }
+            });
+
+            if (!hasMeals) {
+                mealContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">No specific meals logged for this date.</p>';
+            }
+        }
+
+
         // 4. The Midnight Patch (Listen for tab returning to foreground)
         document.addEventListener("visibilitychange", () => {
             if (!document.hidden) {
@@ -2907,10 +3283,10 @@
             // Phase 8 Initializations
             setupWaterDelegation();
 
-            // Phase 7 Initializations
+            // Phase 7 & 12 Initializations
             setupCalendarNavigation();
             
-            // Phase 9 Initializations
+            // Phase 9 & 10 Initializations
             renderHistoryTimeline();
 
             // Phase 4 & 7 & 8 Initializations
