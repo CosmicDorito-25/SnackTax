@@ -909,6 +909,56 @@
             color: var(--text-primary);
         }
 
+        /* Phase 8: Water Tracker Styles */
+        .water-section {
+            margin-top: 32px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            backdrop-filter: blur(12px);
+        }
+
+        .water-section h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .water-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .water-bottle {
+            width: 30px;
+            height: 60px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            background: transparent;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+            position: relative;
+        }
+
+        .water-bottle.full {
+            background: rgba(0, 240, 255, 0.2);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.3), inset 0 0 12px rgba(0, 240, 255, 0.2);
+        }
+
+        .water-bottle:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .water-bottle.full:hover {
+            border-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.5), inset 0 0 16px rgba(0, 240, 255, 0.3);
+        }
+
         /* Full Interactive Calendar Styles */
         .streak-section {
             margin-top: 48px;
@@ -1146,6 +1196,15 @@
                 </div>
             </div>
 
+            <!-- Phase 8: Hydration Tracker -->
+            <div class="water-section">
+                <h2>Hydration</h2>
+                <p class="subtitle" style="margin: 0;">Track your daily water intake (Liters).</p>
+                <div id="water-container" class="water-grid">
+                    <!-- JavaScript will inject water bottles here -->
+                </div>
+            </div>
+
             <!-- Phase 7: Full Interactive Calendar -->
             <div class="streak-section">
                 <div class="calendar-header">
@@ -1345,6 +1404,11 @@
                     <label for="set-fib">Fiber (g)</label>
                     <input type="number" id="set-fib" required min="1">
                 </div>
+                <!-- Phase 8: Added Water Target -->
+                <div class="input-group">
+                    <label for="set-water">Water Target (L)</label>
+                    <input type="number" id="set-water" required min="1" step="1">
+                </div>
             </div>
 
             <div class="flex-buttons">
@@ -1368,7 +1432,7 @@
             },
             dailyLogs: {
                 "2023-10-27": {
-                    totals: { calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1 },
+                    totals: { calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1, water: 0 },
                     meals: { 
                         breakfast: [], 
                         lunch: [
@@ -1386,7 +1450,8 @@
                 maxProtein: 150,
                 maxCarbs: 200,
                 maxFat: 65,
-                maxFiber: 30
+                maxFiber: 30,
+                targetWater: 4
             }
         };
 
@@ -1397,15 +1462,19 @@
                 console.log("Local database not found. Initializing with default schema...");
                 localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(defaultState));
             } else {
-                // Parse existing DB and inject 'fiber' wherever missing to prevent crashes
+                // Parse existing DB and inject 'fiber' & 'water' wherever missing to prevent crashes
                 let parsed = JSON.parse(existingData);
                 
                 if (parsed.userSettings && parsed.userSettings.maxFiber === undefined) {
                     parsed.userSettings.maxFiber = 30;
                 }
+                if (parsed.userSettings && parsed.userSettings.targetWater === undefined) {
+                    parsed.userSettings.targetWater = 4;
+                }
                 
                 Object.values(parsed.dailyLogs).forEach(log => {
                     if (log.totals && log.totals.fiber === undefined) log.totals.fiber = 0;
+                    if (log.totals && log.totals.water === undefined) log.totals.water = 0;
                     Object.values(log.meals).forEach(mealArr => {
                         mealArr.forEach(item => {
                             if (item.fiber === undefined) item.fiber = 0;
@@ -2047,6 +2116,7 @@
             document.getElementById('set-carb').value = set.maxCarbs;
             document.getElementById('set-fat').value = set.maxFat;
             document.getElementById('set-fib').value = set.maxFiber || 30;
+            document.getElementById('set-water').value = set.targetWater || 4;
 
             document.getElementById('settings-modal').classList.add('active');
         };
@@ -2060,8 +2130,9 @@
             const newCarb = parseInt(document.getElementById('set-carb').value);
             const newFat = parseInt(document.getElementById('set-fat').value);
             const newFib = parseInt(document.getElementById('set-fib').value);
+            const newWater = parseInt(document.getElementById('set-water').value);
 
-            if (!newCal || !newPro || !newCarb || !newFat || !newFib) {
+            if (!newCal || !newPro || !newCarb || !newFat || !newFib || !newWater) {
                 alert("Please fill out all targets accurately.");
                 return;
             }
@@ -2071,7 +2142,8 @@
                 maxProtein: newPro,
                 maxCarbs: newCarb,
                 maxFat: newFat,
-                maxFiber: newFib
+                maxFiber: newFib,
+                targetWater: newWater
             };
 
             saveState(state);
@@ -2240,7 +2312,7 @@
         function renderDashboard() {
             const state = getState();
             const dateKey = getLocalYYYYMMDD();
-            const todayLog = state.dailyLogs[dateKey] || { totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 } };
+            const todayLog = state.dailyLogs[dateKey] || { totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 } };
             const settings = state.userSettings;
 
             // Check Limits (shifts CSS variables if exceeded)
@@ -2273,6 +2345,7 @@
             document.getElementById('text-fib-val').innerText = todayLog.totals.fiber || 0;
             document.getElementById('text-fib-max').innerText = `/ ${settings.maxFiber || 30}g`;
 
+            renderWaterTracker();
             renderCalendar(currentViewDate); // Now passes the state variable date
         }
 
@@ -2315,6 +2388,71 @@
                         tooltip: { enabled: false }
                     }
                 }
+            });
+        }
+
+        // --- PHASE 8: HYDRATION TRACKER ---
+        
+        function renderWaterTracker() {
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+            const todayLog = state.dailyLogs[dateKey];
+            const targetWater = state.userSettings.targetWater || 4;
+            const currentWater = todayLog && todayLog.totals.water !== undefined ? todayLog.totals.water : 0;
+
+            const container = document.getElementById('water-container');
+            if (!container) return;
+            
+            container.innerHTML = ''; // Reset UI
+
+            // Always render at least the target amount, or more if they exceeded it
+            const totalRendered = Math.max(targetWater, currentWater);
+
+            for (let i = 1; i <= totalRendered; i++) {
+                const bottle = document.createElement('div');
+                bottle.className = `water-bottle ${i <= currentWater ? 'full' : ''}`;
+                bottle.dataset.index = i;
+                container.appendChild(bottle);
+            }
+        }
+
+        function setupWaterDelegation() {
+            const container = document.getElementById('water-container');
+            if (!container) return;
+
+            container.addEventListener('click', (e) => {
+                const target = e.target.closest('.water-bottle');
+                if (!target) return;
+
+                const clickedIdx = parseInt(target.dataset.index);
+                
+                const state = getState();
+                const dateKey = getLocalYYYYMMDD();
+                
+                // Safety init if no logs exist today
+                if (!state.dailyLogs[dateKey]) {
+                    state.dailyLogs[dateKey] = {
+                        totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 },
+                        meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
+                    };
+                }
+                if (state.dailyLogs[dateKey].totals.water === undefined) {
+                    state.dailyLogs[dateKey].totals.water = 0;
+                }
+
+                const currentWater = state.dailyLogs[dateKey].totals.water;
+
+                // Smart Toggle Logic
+                if (clickedIdx === currentWater) {
+                    // Clicked the last full bottle -> Undo 1
+                    state.dailyLogs[dateKey].totals.water = currentWater - 1;
+                } else {
+                    // Clicked an empty bottle OR a full bottle prior to the last one -> Fill/Drop to that index
+                    state.dailyLogs[dateKey].totals.water = clickedIdx;
+                }
+
+                saveState(state);
+                renderWaterTracker(); // Instantly update visually
             });
         }
 
@@ -2483,10 +2621,13 @@
             setupCustomModals();
             renderDailyLog();
 
+            // Phase 8 Initializations
+            setupWaterDelegation();
+
             // Phase 7 Initializations
             setupCalendarNavigation();
 
-            // Phase 4 & 7 Initializations
+            // Phase 4 & 7 & 8 Initializations
             renderDashboard();
         });
 
