@@ -74,8 +74,8 @@ this is the price of freedom.
 
 ## Limitations
 
-- no sync across devices
-- no fancy analytics
+- no sync across devices (ahm...maybe later?)
+- no fancy analytics (You don't need more analytics than this to follow a diet)
 - no reminders to stop eating (we are instead using human in-built notification system known as 'Guilt')
 
 it will not fix your diet.  
