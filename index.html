@@ -868,6 +868,47 @@
             font-weight: 500;
         }
 
+        /* Dashboard Header Utilities */
+        .overview-header-container {
+            display: flex;
+            justify-content: space-between; /* Pushes title left, button right */
+            align-items: center; /* Vertically centers them */
+            width: 100%;
+            margin-bottom: 24px;
+        }
+        
+        .overview-title-block h2 {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -1px;
+            margin: 0 0 4px 0;
+        }
+
+        .overview-title-block p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            margin: 0; /* Removes default margins so it aligns perfectly */
+        }
+        
+        .edit-targets-btn {
+            width: max-content; /* Strictly limits width to the text size */
+            padding: 8px 16px;
+            white-space: nowrap; /* Prevents the text from wrapping to two lines */
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--glass-border);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+        }
+
+        .edit-targets-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
         /* Full Interactive Calendar Styles */
         .streak-section {
             margin-top: 48px;
@@ -949,15 +990,21 @@
             border-radius: var(--radius-md);
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: flex-start; /* Move date to top-left */
             justify-content: flex-start;
             padding: 8px;
             font-size: 14px;
             font-weight: 600;
             position: relative;
+            overflow: hidden; /* Stop massive emojis from overflowing */
             transition: all var(--transition-smooth);
             color: var(--text-secondary);
             cursor: default;
+        }
+
+        .calendar-cell .date-num {
+            position: relative;
+            z-index: 2; /* Keep date readable above the background emoji */
         }
 
         .calendar-cell.today {
@@ -983,15 +1030,21 @@
         }
 
         .gamification-overlay {
-            font-size: 20px;
-            margin-top: auto;
-            margin-bottom: 4px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3.5rem; /* Super-size the symbol */
+            opacity: 0.5; /* Dim the symbol so it acts as a background */
+            margin: 0;
             line-height: 1;
+            z-index: 1;
+            pointer-events: none; /* Prevent symbol from blocking hover/clicks */
         }
 
         @media (max-width: 768px) {
             .calendar-cell { padding: 4px; font-size: 12px; }
-            .gamification-overlay { font-size: 16px; margin-bottom: 2px; }
+            .gamification-overlay { font-size: 2rem; } /* Scale down on mobile */
             .calendar-weekdays { font-size: 11px; }
         }
 
@@ -1030,12 +1083,12 @@
         
         <!-- Dashboard Section -->
         <section id="dashboard" class="tab-section">
-            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
-                <div>
-                    <h1>Overview</h1>
-                    <p class="subtitle">Your daily metabolic snapshot.</p>
+            <div class="overview-header-container">
+                <div class="overview-title-block">
+                    <h2>Overview</h2>
+                    <p>Your daily metabolic snapshot.</p>
                 </div>
-                <button class="btn-secondary" onclick="openSettingsModal()" style="padding: 10px 16px; font-size: 13px; width: auto;">Edit Targets</button>
+                <button id="edit-targets-btn" class="edit-targets-btn" onclick="openSettingsModal()">Edit Targets</button>
             </div>
             
             <!-- Phase 4: Charts Grid -->
@@ -2365,6 +2418,7 @@
                 if (dateKey === localTodayKey) cellDiv.classList.add('today'); // Neon Border class
                 
                 const dateNum = document.createElement('span');
+                dateNum.className = 'date-num'; // Add class for absolute z-indexing
                 dateNum.innerText = cell.date.getDate();
                 cellDiv.appendChild(dateNum);
 
