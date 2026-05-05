@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nutrition Dashboard | Phase 1</title>
+    
+    <!-- Import Modern Font (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Phase 4: External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* * 1. DESIGN SYSTEM & CSS VARIABLES
+         * Defining the "Igloo.inc" deep dark aesthetic with neon accents.
+         */
+        :root {
+            /* Core Backgrounds */
+            --bg-base: #0a0a0a;
+            --bg-elevated: #121212;
+            
+            /* Glassmorphism */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --glass-highlight: rgba(255, 255, 255, 0.1);
+            
+            /* Neon Accents */
+            --accent-blue: #00f0ff;
+            --accent-violet: #8a2be2;
+            --accent-emerald: #00ff66;
+            --accent-pink: #ff00ff; /* Phase 6: Added Pink for Fiber */
+            
+            /* Typography Colors */
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #555555;
+            
+            /* Spacing & Radii */
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --radius-full: 9999px;
+            
+            /* Animation Defaults */
+            --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* * PHASE 4: Strict Limits Overrides
+         * When limit-exceeded is applied to body, ambient glows shift to crimson.
+         */
+        body.limit-exceeded {
+            --accent-blue: #ff2a2a;
+            --accent-violet: #ff003c;
+            --accent-emerald: #ff4d4d;
+        }
+        body.limit-exceeded .ambient-glow {
+            opacity: 0.25; /* Slightly brighter red ambient glow */
+            animation: pulse-red 2s infinite alternate;
+        }
+        
+        @keyframes pulse-red {
+            0% { filter: blur(120px) brightness(1); }
+            100% { filter: blur(120px) brightness(1.3); }
+        }
+
+        /* Base Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* * Ambient Glow Effects
+         * Creates the subtle Web3 dashboard background depth
+         */
+        .ambient-glow {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: 0;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .glow-1 {
+            top: -10%;
+            left: -10%;
+            width: 50vw;
+            height: 50vw;
+            background: var(--accent-violet);
+        }
+        .glow-2 {
+            bottom: -10%;
+            right: -10%;
+            width: 40vw;
+            height: 40vw;
+            background: var(--accent-blue);
+        }
+
+        /* * 2. APP ARCHITECTURE & LAYOUT
+         */
+        
+        /* Side Navigation (Glassmorphic) */
+        .sidebar {
+            position: fixed;
+            top: 24px;
+            left: 24px;
+            bottom: 24px;
+            width: 260px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            z-index: 10;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-primary);
+        }
+
+        .logo-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-blue);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--accent-blue);
+        }
+
+        /* Navigation Links */
+        .nav-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            padding: 14px 20px;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 500;
+            text-align: left;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        /* Hover & Micro-animations */
+        .nav-item:hover {
+            background: var(--glass-highlight);
+            color: var(--text-primary);
+            transform: translateX(4px);
+        }
+
+        /* Active State with subtle glowing border */
+        .nav-item.active {
+            background: rgba(0, 240, 255, 0.05);
+            color: var(--accent-blue);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            box-shadow: inset 0 0 20px rgba(0, 240, 255, 0.02);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 308px; /* Sidebar width + spacing */
+            padding: 48px;
+            width: calc(100% - 308px);
+            z-index: 1;
+            position: relative;
+        }
+
+        /* * Tab Content & Smooth Reveal
+         */
+        .tab-section {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        /* The requested hidden class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Initial state for smooth reveal animation */
+        .tab-section.reveal-start {
+            opacity: 0;
+            transform: translateY(15px);
+        }
+
+        /* Placeholder Content Styling */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            margin-top: 24px;
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* Mobile Responsiveness (Bottom Bar fallback) */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar {
+                top: auto; left: 0; right: 0; bottom: 0;
+                width: 100%; height: 80px;
+                border-radius: 20px 20px 0 0;
+                padding: 0 20px;
+                flex-direction: row;
+                justify-content: space-around;
+                align-items: center;
+                gap: 0;
+            }
+            .logo { display: none; }
+            .nav-links { flex-direction: row; width: 100%; justify-content: space-around; gap: 0;}
+            .nav-item { flex-direction: column; padding: 10px; font-size: 12px; gap: 6px; }
+            .nav-item:hover { transform: translateY(-2px); }
+            .main-content { margin-left: 0; width: 100%; padding: 24px 24px 100px 24px; }
+        }
+
+        /* * 3. PHASE 2 - LIBRARY UI STYLES
+         * Form elements, Segmented Controls, and Data Grids
+         */
+        
+        .library-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+            margin-top: 24px;
+        }
+
+        @media (min-width: 1024px) {
+            .library-layout {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+            .library-form-panel { flex: 1; }
+            .library-list-panel { flex: 1.5; }
+        }
+
+        .panel-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        /* Form Inputs */
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 15px;
+            outline: none;
+            transition: all var(--transition-smooth);
+        }
+        input[type="text"]:focus, input[type="number"]:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 16px rgba(0, 240, 255, 0.15);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        /* Segmented Control Toggle */
+        .segmented-control {
+            display: flex;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 4px;
+        }
+        .segmented-control input[type="radio"] {
+            display: none;
+        }
+        .segmented-control label {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            margin-bottom: 0;
+            cursor: pointer;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            transition: all var(--transition-smooth);
+            text-transform: none;
+            letter-spacing: 0;
+        }
+        .segmented-control input[type="radio"]:checked + label {
+            background: var(--glass-highlight);
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Macros Grid */
+        .macros-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); /* Auto-fit to comfortably hold 5 items */
+            gap: 16px;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: rgba(0, 240, 255, 0.05);
+            color: var(--accent-blue);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+            margin-top: 8px;
+        }
+        .btn-primary:hover {
+            background: rgba(0, 240, 255, 0.15);
+            box-shadow: 0 0 24px rgba(0, 240, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        .btn-primary.success {
+            background: rgba(0, 255, 102, 0.1);
+            color: var(--accent-emerald);
+            border-color: rgba(0, 255, 102, 0.3);
+            box-shadow: 0 0 24px rgba(0, 255, 102, 0.2);
+        }
+
+        /* Saved Food Cards */
+        .food-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .food-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            transition: all var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .food-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-4px);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        .food-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .food-card .unit {
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: rgba(0,0,0,0.4);
+            padding: 4px 8px;
+            border-radius: var(--radius-full);
+            width: fit-content;
+        }
+        .food-card-macros {
+            display: flex;
+            justify-content: space-between;
+            gap: 4px;
+            margin-top: auto;
+        }
+        .macro-pill {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 4px;
+            border-radius: 8px;
+            flex: 1;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .macro-pill span:last-child {
+            font-size: 10px;
+            font-weight: 500;
+            opacity: 0.6;
+            margin-top: 2px;
+            text-transform: uppercase;
+        }
+        
+        /* Macro Accent Colors */
+        .macro-pill.cal { color: var(--accent-blue); }
+        .macro-pill.pro { color: var(--accent-emerald); }
+        .macro-pill.carb { color: var(--accent-violet); }
+        .macro-pill.fat { color: #ff9900; }
+        .macro-pill.fib { color: var(--accent-pink); }
+
+        /* * 4. PHASE 3 - LOGGER & MODAL STYLES
+         */
+
+        /* Search Bar */
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-top: 16px;
+            margin-bottom: 24px;
+        }
+        .search-input {
+            width: 100%;
+            padding: 18px 24px 18px 48px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-full);
+            color: var(--text-primary);
+            font-size: 16px;
+            outline: none;
+            transition: all var(--transition-smooth);
+            backdrop-filter: blur(8px);
+        }
+        .search-input:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+            background: rgba(0, 0, 0, 0.6);
+        }
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        /* Search Results */
+        .search-results {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 600px;
+        }
+        .result-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+        }
+        .result-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(0, 240, 255, 0.3);
+            transform: translateX(4px);
+        }
+        .result-info h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .result-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .btn-add-small {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--accent-blue);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            padding: 8px 16px;
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+            pointer-events: none; /* Let parent handle click */
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: #111;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            width: 90%;
+            max-width: 420px;
+            transform: translateY(20px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        /* Meal Category Pills */
+        .meal-pills {
+            display: flex;
+            gap: 6px; /* slightly tighter to fit 5 pills */
+            margin-top: 12px;
+            flex-wrap: wrap; /* in case of narrow screens */
+        }
+        .meal-pill {
+            flex: 1;
+            min-width: 65px;
+            text-align: center;
+            padding: 10px 4px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+        }
+        .meal-pill:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .meal-pill.active {
+            background: rgba(138, 43, 226, 0.15); /* Violet Accent */
+            color: var(--text-primary);
+            border-color: var(--accent-violet);
+            box-shadow: inset 0 0 12px rgba(138, 43, 226, 0.2);
+        }
+
+        /* Modal Layout Utilities */
+        .flex-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .btn-secondary {
+            flex: 1;
+            padding: 16px;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+        .btn-primary.flex-2 { flex: 2; margin-top: 0; }
+
+        .btn-primary.btn-danger {
+            background: rgba(255, 68, 68, 0.1);
+            color: #ff4444;
+            border-color: rgba(255, 68, 68, 0.3);
+        }
+        .btn-primary.btn-danger:hover {
+            background: rgba(255, 68, 68, 0.15);
+            box-shadow: 0 0 24px rgba(255, 68, 68, 0.2);
+        }
+
+        /* Edit and Delete Buttons for Library & Logs */
+        .edit-btn {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 600;
+            transition: all var(--transition-smooth);
+        }
+        .edit-btn:hover {
+            color: var(--accent-blue);
+            background: rgba(0, 240, 255, 0.1);
+            border-color: rgba(0, 240, 255, 0.3);
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+        }
+
+        .delete-btn {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 600;
+            transition: all var(--transition-smooth);
+        }
+        .delete-btn:hover {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            border-color: rgba(255, 68, 68, 0.3);
+            box-shadow: 0 0 12px rgba(255, 68, 68, 0.2);
+        }
+        .food-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        /* * 6. PHASE 3 EXPANSION - DAILY LOG TIMELINE 
+         */
+        
+        .daily-log-section {
+            margin-top: 48px;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 32px;
+        }
+        
+        .daily-log-section h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 24px;
+        }
+
+        .log-category-block {
+            margin-bottom: 24px;
+        }
+
+        .log-category-header {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log-category-header::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(0, 240, 255, 0.2) 0%, transparent 100%);
+        }
+
+        .log-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all var(--transition-smooth);
+        }
+        
+        .log-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .log-item-details h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .log-item-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .log-item-meta .timestamp {
+            background: rgba(0,0,0,0.4);
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            color: var(--accent-violet);
+            font-weight: 500;
+        }
+
+        .log-item-macros {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .log-item-macros span {
+            color: var(--text-muted);
+            margin: 0 4px;
+        }
+
+        .log-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+        }
+
+        .btn-icon:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn-icon.edit:hover {
+            color: var(--accent-blue);
+            border-color: rgba(0, 240, 255, 0.3);
+        }
+
+        .btn-icon.delete:hover {
+            color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            border-color: rgba(255, 68, 68, 0.3);
+        }
+
+        /* * 5. PHASE 4 - DASHBOARD CHARTS & CALENDAR STYLES
+         */
+        
+        /* Macros Ring Grid */
+        .dashboard-charts {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+            margin-top: 24px;
+        }
+        @media (min-width: 1024px) {
+            .dashboard-charts { grid-template-columns: repeat(5, 1fr); } /* Updated for 5 charts */
+        }
+
+        .chart-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            backdrop-filter: blur(12px);
+        }
+        
+        .chart-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+
+        .chart-center-text {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        
+        .chart-center-text .val {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.1;
+        }
+        
+        .chart-center-text .lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        /* Streak Calendar */
+        .streak-section {
+            margin-top: 48px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            backdrop-filter: blur(12px);
+        }
+
+        .streak-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 24px;
+        }
+
+        .streak-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .streak-count-badge {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--accent-blue);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            padding: 6px 16px;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            font-size: 14px;
+        }
+        body.limit-exceeded .streak-count-badge {
+            background: rgba(255, 42, 42, 0.1);
+            color: var(--accent-blue);
+            border-color: rgba(255, 42, 42, 0.2);
+        }
+
+        .calendar-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .calendar-day {
+            width: calc(10% - 9px); /* Roughly 10 items per row on desktop */
+            aspect-ratio: 1;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all var(--transition-smooth);
+        }
+
+        @media (max-width: 768px) {
+            .calendar-day { width: calc(14.28% - 9px); /* 7 items per row on mobile */ }
+        }
+
+        .calendar-day.success {
+            background: rgba(0, 255, 102, 0.05);
+            border-color: rgba(0, 255, 102, 0.2);
+            box-shadow: inset 0 0 12px rgba(0, 255, 102, 0.1);
+        }
+        
+        .calendar-day.failed {
+            background: rgba(255, 68, 68, 0.05);
+            border-color: rgba(255, 68, 68, 0.2);
+            filter: grayscale(100%);
+            opacity: 0.5;
+        }
+
+        .calendar-day.empty span {
+            width: 6px;
+            height: 6px;
+            background: var(--text-muted);
+            border-radius: 50%;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Web3 Background Glows -->
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <!-- Fixed Navigation -->
+    <nav class="sidebar">
+        <div class="logo">
+            <div class="logo-dot"></div>
+            NutriTracker
+        </div>
+        <div class="nav-links">
+            <button class="nav-item active" data-tab="dashboard">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+                Dashboard
+            </button>
+            <button class="nav-item" data-tab="logger">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                Logger
+            </button>
+            <button class="nav-item" data-tab="library">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                Library
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Sections -->
+    <main class="main-content">
+        
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="tab-section">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px;">
+                <div>
+                    <h1>Overview</h1>
+                    <p class="subtitle">Your daily metabolic snapshot.</p>
+                </div>
+                <button class="btn-secondary" onclick="openSettingsModal()" style="padding: 10px 16px; font-size: 13px; width: auto;">Edit Targets</button>
+            </div>
+            
+            <!-- Phase 4: Charts Grid -->
+            <div class="dashboard-charts">
+                <div class="chart-card">
+                    <div class="chart-title">Calories</div>
+                    <div class="chart-wrapper">
+                        <canvas id="calChart"></canvas>
+                        <div class="chart-center-text">
+                            <span class="val" id="text-cal-val">0</span>
+                            <span class="lbl" id="text-cal-max">/ 2000 kcal</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title" style="color: var(--accent-emerald);">Protein</div>
+                    <div class="chart-wrapper">
+                        <canvas id="proChart"></canvas>
+                        <div class="chart-center-text">
+                            <span class="val" id="text-pro-val">0</span>
+                            <span class="lbl" id="text-pro-max">/ 150g</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title" style="color: var(--accent-violet);">Carbs</div>
+                    <div class="chart-wrapper">
+                        <canvas id="carbChart"></canvas>
+                        <div class="chart-center-text">
+                            <span class="val" id="text-carb-val">0</span>
+                            <span class="lbl" id="text-carb-max">/ 200g</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-title" style="color: #ff9900;">Fat</div>
+                    <div class="chart-wrapper">
+                        <canvas id="fatChart"></canvas>
+                        <div class="chart-center-text">
+                            <span class="val" id="text-fat-val">0</span>
+                            <span class="lbl" id="text-fat-max">/ 65g</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Phase 6: Added Fiber Chart -->
+                <div class="chart-card">
+                    <div class="chart-title" style="color: var(--accent-pink);">Fiber</div>
+                    <div class="chart-wrapper">
+                        <canvas id="fibChart"></canvas>
+                        <div class="chart-center-text">
+                            <span class="val" id="text-fib-val">0</span>
+                            <span class="lbl" id="text-fib-max">/ 30g</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 4: Streak Calendar -->
+            <div class="streak-section">
+                <div class="streak-header">
+                    <h2>30-Day Streak Map</h2>
+                    <div class="streak-count-badge">Current Streak: <span id="streak-counter">0</span></div>
+                </div>
+                <div id="streak-grid" class="calendar-grid">
+                    <!-- JavaScript will inject calendar boxes here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Logger Section -->
+        <section id="logger" class="tab-section hidden">
+            <h1>Food Logger</h1>
+            <p class="subtitle">Search your library and record today's intake.</p>
+            
+            <!-- Live Search Bar -->
+            <div class="search-container">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="food-search-input" class="search-input" placeholder="Search saved foods..." autocomplete="off">
+            </div>
+
+            <!-- Dynamic Search Results -->
+            <div id="search-results-container" class="search-results">
+                <!-- Javascript will inject search results here -->
+            </div>
+
+            <!-- Phase 3 Expansion: Today's Log Timeline -->
+            <div class="daily-log-section">
+                <h2>Today's Log</h2>
+                <div id="daily-log-container">
+                    <!-- Javascript will inject categorized logged items here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Library Section -->
+        <section id="library" class="tab-section hidden">
+            <h1>My Library</h1>
+            <p class="subtitle">Custom foods and saved baseline ingredients.</p>
+            
+            <div class="library-layout">
+                <!-- Add New Food Form -->
+                <div class="glass-panel library-form-panel">
+                    <h2 class="panel-header">Create New Food</h2>
+                    <form id="add-food-form">
+                        <div class="input-group">
+                            <label for="food-name">Food Name</label>
+                            <input type="text" id="food-name" required placeholder="e.g. Grilled Chicken Breast">
+                        </div>
+
+                        <div class="input-group">
+                            <label>Base Unit Type</label>
+                            <div class="segmented-control">
+                                <input type="radio" id="unit-item" name="food-unit" value="item" checked>
+                                <label for="unit-item">Per Item</label>
+                                
+                                <input type="radio" id="unit-100g" name="food-unit" value="100g">
+                                <label for="unit-100g">Per 100g</label>
+                            </div>
+                        </div>
+
+                        <div class="macros-grid">
+                            <div class="input-group">
+                                <label for="food-cal">Calories</label>
+                                <input type="number" id="food-cal" required min="0" placeholder="0">
+                            </div>
+                            <div class="input-group">
+                                <label for="food-pro">Protein (g)</label>
+                                <input type="number" id="food-pro" required min="0" step="0.1" placeholder="0">
+                            </div>
+                            <div class="input-group">
+                                <label for="food-carb">Carbs (g)</label>
+                                <input type="number" id="food-carb" required min="0" step="0.1" placeholder="0">
+                            </div>
+                            <div class="input-group">
+                                <label for="food-fat">Fat (g)</label>
+                                <input type="number" id="food-fat" required min="0" step="0.1" placeholder="0">
+                            </div>
+                            <div class="input-group">
+                                <label for="food-fib">Fiber (g)</label>
+                                <input type="number" id="food-fib" required min="0" step="0.1" placeholder="0">
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="save-food-btn">Save to Library</button>
+                    </form>
+                </div>
+
+                <!-- Display Saved Foods -->
+                <div class="library-list-panel">
+                    <h2 class="panel-header">Saved Library</h2>
+                    <div id="library-list" class="food-grid">
+                        <!-- Javascript will dynamically inject food cards here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Phase 3: Log Food Modal -->
+    <div id="log-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="modal-title" style="margin-bottom: 4px; font-size: 24px;">Food Name</h2>
+            <p id="modal-subtitle" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">Per 100g • 130 kcal</p>
+
+            <div class="input-group">
+                <label for="log-qty" id="log-qty-label">Quantity Consumed</label>
+                <input type="number" id="log-qty" required min="0" step="0.1" placeholder="Enter amount...">
+            </div>
+
+            <div class="input-group" style="margin-top: 20px;">
+                <label>Meal Category</label>
+                <div class="meal-pills" id="meal-selector">
+                    <div class="meal-pill active" data-meal="breakfast">Breakfast</div>
+                    <div class="meal-pill" data-meal="lunch">Lunch</div>
+                    <div class="meal-pill" data-meal="snack">Snack</div>
+                    <div class="meal-pill" data-meal="dinner">Dinner</div>
+                    <div class="meal-pill" data-meal="miscellaneous">Misc</div>
+                </div>
+            </div>
+
+            <div class="flex-buttons">
+                <button type="button" class="btn-secondary" id="btn-cancel-log">Cancel</button>
+                <button type="button" class="btn-primary flex-2" id="btn-confirm-log">Log Food</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 5: Custom Edit Modal -->
+    <div id="custom-edit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 4px; font-size: 24px;">Edit Quantity</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">Update the consumed amount for this log.</p>
+
+            <div class="input-group">
+                <label for="edit-log-qty">New Quantity</label>
+                <input type="number" id="edit-log-qty" required min="0" step="0.1">
+            </div>
+
+            <div class="flex-buttons">
+                <button type="button" class="btn-secondary" onclick="closeCustomModals()">Cancel</button>
+                <button type="button" class="btn-primary flex-2" id="btn-confirm-edit">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 5: Custom Delete Modal -->
+    <div id="custom-delete-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 4px; font-size: 24px; color: #ff4444;">Confirm Deletion</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">Are you sure you want to remove this item from today's log? This action cannot be undone.</p>
+            
+            <div class="flex-buttons">
+                <button type="button" class="btn-secondary" onclick="closeCustomModals()">Cancel</button>
+                <button type="button" class="btn-primary btn-danger flex-2" id="btn-confirm-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 6: Custom Settings Modal -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 4px; font-size: 24px;">Set Daily Targets</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">Adjust your daily macro limits.</p>
+
+            <div class="macros-grid">
+                <div class="input-group">
+                    <label for="set-cal">Max Calories</label>
+                    <input type="number" id="set-cal" required min="1">
+                </div>
+                <div class="input-group">
+                    <label for="set-pro">Protein (g)</label>
+                    <input type="number" id="set-pro" required min="1">
+                </div>
+                <div class="input-group">
+                    <label for="set-carb">Carbs (g)</label>
+                    <input type="number" id="set-carb" required min="1">
+                </div>
+                <div class="input-group">
+                    <label for="set-fat">Fat (g)</label>
+                    <input type="number" id="set-fat" required min="1">
+                </div>
+                <div class="input-group">
+                    <label for="set-fib">Fiber (g)</label>
+                    <input type="number" id="set-fib" required min="1">
+                </div>
+            </div>
+
+            <div class="flex-buttons">
+                <button type="button" class="btn-secondary" onclick="closeCustomModals()">Cancel</button>
+                <button type="button" class="btn-primary flex-2" id="btn-confirm-settings">Save Targets</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Logic -->
+    <script>
+        /**
+         * 3. STATE MANAGEMENT INITIALIZATION
+         * Strictly uses the provided schema. Checks LocalStorage, and sets default if empty.
+         */
+        const APP_STORAGE_KEY = 'nutritracker_db';
+
+        const defaultState = {
+            foodLibrary: {
+                "food_123": { name: "White Rice", baseUnit: "g", baseQty: 100, calories: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4 }
+            },
+            dailyLogs: {
+                "2023-10-27": {
+                    totals: { calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1 },
+                    meals: { 
+                        breakfast: [], 
+                        lunch: [
+                            // Snapshot logic: Full object data stored, not just IDs
+                            { id: "food_123", name: "White Rice", consumedQty: 250, calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1, logId: "log_demo123", loggedAt: "12:30 PM", baseQty: 100, baseCalories: 130, baseProtein: 2.7, baseCarbs: 28, baseFat: 0.3, baseFiber: 0.4, unit: "g" }
+                        ], 
+                        dinner: [], 
+                        snack: [],
+                        miscellaneous: []
+                    }
+                }
+            },
+            userSettings: {
+                maxCalories: 2000,
+                maxProtein: 150,
+                maxCarbs: 200,
+                maxFat: 65,
+                maxFiber: 30
+            }
+        };
+
+        // Initialize Database with Schema Migration logic
+        function initializeStore() {
+            const existingData = localStorage.getItem(APP_STORAGE_KEY);
+            if (!existingData) {
+                console.log("Local database not found. Initializing with default schema...");
+                localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(defaultState));
+            } else {
+                // Parse existing DB and inject 'fiber' wherever missing to prevent crashes
+                let parsed = JSON.parse(existingData);
+                
+                if (parsed.userSettings && parsed.userSettings.maxFiber === undefined) {
+                    parsed.userSettings.maxFiber = 30;
+                }
+                
+                Object.values(parsed.dailyLogs).forEach(log => {
+                    if (log.totals && log.totals.fiber === undefined) log.totals.fiber = 0;
+                    Object.values(log.meals).forEach(mealArr => {
+                        mealArr.forEach(item => {
+                            if (item.fiber === undefined) item.fiber = 0;
+                            if (item.baseFiber === undefined) item.baseFiber = 0;
+                        });
+                    });
+                });
+
+                Object.values(parsed.foodLibrary).forEach(food => {
+                    if (food.fiber === undefined) food.fiber = 0;
+                });
+
+                localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(parsed));
+                console.log("Local database loaded and schema migrated successfully.");
+            }
+        }
+
+        /**
+         * TAB NAVIGATION LOGIC
+         * Handles switching between views using the .hidden class and smooth reveals.
+         */
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-item');
+            const tabSections = document.querySelectorAll('.tab-section');
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.getAttribute('data-tab');
+
+                    // 1. Update active states on buttons
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    // 2. Hide all sections and prepare for animation
+                    tabSections.forEach(section => {
+                        // Immediately hide non-target sections
+                        if (section.id !== targetId) {
+                            section.classList.add('hidden');
+                        }
+                    });
+
+                    // 3. Reveal the target section with animation
+                    const targetSection = document.getElementById(targetId);
+                    
+                    // Remove hidden class to render it in DOM
+                    targetSection.classList.remove('hidden');
+                    
+                    // Reset animation state
+                    targetSection.classList.add('reveal-start');
+                    
+                    // Trigger reflow to restart CSS animation transition
+                    void targetSection.offsetWidth; 
+                    
+                    // Remove start class to trigger the smooth CSS transition into place
+                    targetSection.classList.remove('reveal-start');
+                });
+            });
+        }
+
+        /**
+         * --- PHASE 2: LIBRARY MANAGEMENT LOGIC ---
+         */
+
+        // Helper to retrieve state cleanly
+        function getState() {
+            return JSON.parse(localStorage.getItem(APP_STORAGE_KEY));
+        }
+
+        // Helper to save state cleanly
+        function saveState(state) {
+            localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        // Global tracker for Library Edit Mode
+        let editingLibraryFoodId = null;
+
+        // Dedicated function to edit library food
+        window.editLibraryFood = function(foodId) {
+            const state = getState();
+            const food = state.foodLibrary[foodId];
+            
+            if (!food) return;
+
+            editingLibraryFoodId = foodId;
+
+            // 1. Populate Form Inputs
+            document.getElementById('food-name').value = food.name;
+            if (food.baseUnit === 'item') {
+                document.getElementById('unit-item').checked = true;
+            } else {
+                document.getElementById('unit-100g').checked = true;
+            }
+            document.getElementById('food-cal').value = food.calories;
+            document.getElementById('food-pro').value = food.protein;
+            document.getElementById('food-carb').value = food.carbs;
+            document.getElementById('food-fat').value = food.fat;
+            document.getElementById('food-fib').value = food.fiber || 0;
+
+            // 2. Change Button State
+            document.getElementById('save-food-btn').innerText = 'Update Food';
+
+            // 3. Scroll user back to the form
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // Dedicated function to delete food
+        window.deleteFood = function(foodId) {
+            const state = getState();
+            
+            // Check if food exists in library
+            if (state.foodLibrary[foodId]) {
+                // Remove it using the delete operator
+                delete state.foodLibrary[foodId];
+                
+                // Instantly save the updated state
+                saveState(state);
+                
+                // Refresh the UI
+                renderLibrary();
+            }
+        };
+
+        // Dynamically renders the food library from localStorage into the UI Grid
+        function renderLibrary() {
+            const state = getState();
+            const libraryList = document.getElementById('library-list');
+            libraryList.innerHTML = ''; // Clear current grid
+
+            const foods = Object.entries(state.foodLibrary);
+
+            if (foods.length === 0) {
+                libraryList.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">No custom foods found. Create your first food to populate the library!</p>';
+                return;
+            }
+
+            // Loop and construct HTML for each food card
+            foods.forEach(([id, food]) => {
+                const displayUnit = food.baseUnit === 'item' ? '1 Item' : '100g';
+                const card = document.createElement('div');
+                card.className = 'food-card';
+                card.innerHTML = `
+                    <div class="food-card-header">
+                        <h3 title="${food.name}">${food.name}</h3>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="edit-btn" onclick="window.editLibraryFood('${id}')">Edit</button>
+                            <button class="delete-btn" onclick="window.deleteFood('${id}')">Delete</button>
+                        </div>
+                    </div>
+                    <span class="unit">Per ${displayUnit}</span>
+                    <div class="food-card-macros">
+                        <div class="macro-pill cal"><span>${food.calories}</span><span>cal</span></div>
+                        <div class="macro-pill pro"><span>${food.protein}</span><span>pro</span></div>
+                        <div class="macro-pill carb"><span>${food.carbs}</span><span>carb</span></div>
+                        <div class="macro-pill fat"><span>${food.fat}</span><span>fat</span></div>
+                        <div class="macro-pill fib"><span>${food.fiber || 0}</span><span>fib</span></div>
+                    </div>
+                `;
+                libraryList.appendChild(card);
+            });
+        }
+
+        // Sets up form submission listener and state manipulation
+        function setupLibraryForm() {
+            const form = document.getElementById('add-food-form');
+            const submitBtn = document.getElementById('save-food-btn');
+
+            form.addEventListener('submit', (e) => {
+                e.preventDefault(); // Prevent page reload
+
+                // 1. Gather values from form
+                const name = document.getElementById('food-name').value;
+                const unitToggle = document.querySelector('input[name="food-unit"]:checked').value;
+                const calories = parseFloat(document.getElementById('food-cal').value) || 0;
+                const protein = parseFloat(document.getElementById('food-pro').value) || 0;
+                const carbs = parseFloat(document.getElementById('food-carb').value) || 0;
+                const fat = parseFloat(document.getElementById('food-fat').value) || 0;
+                const fiber = parseFloat(document.getElementById('food-fib').value) || 0;
+
+                // 2. Resolve Base Unit Logic
+                let baseUnit = "item";
+                let baseQty = 1;
+                if (unitToggle === "100g") {
+                    baseUnit = "g";
+                    baseQty = 100;
+                }
+
+                // 3. Construct Data Object
+                const newFood = {
+                    name,
+                    baseUnit,
+                    baseQty,
+                    calories,
+                    protein,
+                    carbs,
+                    fat,
+                    fiber
+                };
+
+                // 4. Save to LocalStorage DB (Handle Create vs Update)
+                const state = getState();
+                let isUpdate = false;
+                let id;
+
+                if (editingLibraryFoodId) {
+                    id = editingLibraryFoodId; // Overwrite existing
+                    isUpdate = true;
+                } else {
+                    id = 'food_' + Date.now(); // Generate new
+                }
+
+                state.foodLibrary[id] = newFood;
+                saveState(state);
+
+                // 5. CRITICAL: Trigger Today Sync if we updated an existing food
+                if (isUpdate) {
+                    syncTodayLogs(id);
+                    editingLibraryFoodId = null; // Reset tracker
+                }
+
+                // 6. Update UI
+                renderLibrary();
+                form.reset();
+                
+                // 7. Visual Confirmation
+                submitBtn.classList.add('success');
+                submitBtn.innerText = isUpdate ? 'Updated Successfully!' : 'Saved Successfully!';
+                
+                setTimeout(() => {
+                    submitBtn.classList.remove('success');
+                    submitBtn.innerText = 'Save to Library'; // Always reset back to default state
+                }, 1500);
+            });
+        }
+
+        /**
+         * --- PHASE 4 EXPANSION: TODAY SYNC LOGIC ---
+         */
+        function syncTodayLogs(updatedFoodId) {
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+            const todayLog = state.dailyLogs[dateKey];
+            const updatedFood = state.foodLibrary[updatedFoodId];
+
+            // If there's no log for today, nothing to sync
+            if (!todayLog || !updatedFood) return;
+
+            let needsRecalculation = false;
+            const categories = ['breakfast', 'lunch', 'snack', 'dinner', 'miscellaneous'];
+
+            // 1. Loop categories and update snapshot macros for the specific food
+            categories.forEach(category => {
+                if (todayLog.meals[category]) {
+                    todayLog.meals[category].forEach(item => {
+                        if (item.id === updatedFoodId) {
+                            needsRecalculation = true;
+                            
+                            // Math: Apply strict multiplier logic to existing consumedQty
+                            const multiplier = item.consumedQty / updatedFood.baseQty;
+                            
+                            // Re-calculate macros and round to 1 decimal place safely
+                            item.calories = Math.round((updatedFood.calories * multiplier) * 10) / 10;
+                            item.protein = Math.round((updatedFood.protein * multiplier) * 10) / 10;
+                            item.carbs = Math.round((updatedFood.carbs * multiplier) * 10) / 10;
+                            item.fat = Math.round((updatedFood.fat * multiplier) * 10) / 10;
+                            item.fiber = Math.round((updatedFood.fiber * multiplier) * 10) / 10;
+                            
+                            // Synchronize the base stats inside the snapshot 
+                            // so future edits of this daily log maintain accuracy
+                            item.name = updatedFood.name;
+                            item.unit = updatedFood.baseUnit;
+                            item.baseQty = updatedFood.baseQty;
+                            item.baseCalories = updatedFood.calories;
+                            item.baseProtein = updatedFood.protein;
+                            item.baseCarbs = updatedFood.carbs;
+                            item.baseFat = updatedFood.fat;
+                            item.baseFiber = updatedFood.fiber;
+                        }
+                    });
+                }
+            });
+
+            // 2. Recalculate Today's Totals from Scratch
+            // We wipe the slate clean and add everything up again to guarantee 100% precision.
+            if (needsRecalculation) {
+                let newTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
+                
+                categories.forEach(category => {
+                    if (todayLog.meals[category]) {
+                        todayLog.meals[category].forEach(item => {
+                            newTotals.calories = Math.round((newTotals.calories + item.calories) * 10) / 10;
+                            newTotals.protein = Math.round((newTotals.protein + item.protein) * 10) / 10;
+                            newTotals.carbs = Math.round((newTotals.carbs + item.carbs) * 10) / 10;
+                            newTotals.fat = Math.round((newTotals.fat + item.fat) * 10) / 10;
+                            newTotals.fiber = Math.round((newTotals.fiber + (item.fiber || 0)) * 10) / 10;
+                        });
+                    }
+                });
+                
+                todayLog.totals = newTotals;
+                saveState(state);
+                
+                // 3. Immediately reflect new calculations in the UI
+                renderDailyLog();
+                renderDashboard();
+            }
+        }
+
+        /**
+         * --- PHASE 3: LOGGER SEARCH & MATH LOGIC ---
+         */
+        
+        let activeSelectedFood = null; // Stores data for the modal
+        let activeSelectedId = null;
+        let selectedMealCategory = 'breakfast'; // Default
+
+        // 1. Live Search Logic
+        function setupLoggerSearch() {
+            const searchInput = document.getElementById('food-search-input');
+            const resultsContainer = document.getElementById('search-results-container');
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                
+                // Clear results if input is empty
+                if (!query) {
+                    resultsContainer.innerHTML = '';
+                    return;
+                }
+
+                const state = getState();
+                const allFoods = Object.entries(state.foodLibrary);
+                
+                // Filter logic
+                const matches = allFoods.filter(([id, food]) => 
+                    food.name.toLowerCase().includes(query)
+                );
+
+                resultsContainer.innerHTML = ''; // Reset container
+                
+                if (matches.length === 0) {
+                    resultsContainer.innerHTML = '<p style="color: var(--text-muted); padding: 12px;">No foods found. Add them in the Library tab.</p>';
+                    return;
+                }
+
+                // Render matches
+                matches.forEach(([id, food]) => {
+                    const displayUnit = food.baseUnit === 'item' ? 'Item' : '100g';
+                    
+                    const div = document.createElement('div');
+                    div.className = 'result-item';
+                    div.innerHTML = `
+                        <div class="result-info">
+                            <h4>${food.name}</h4>
+                            <p>${food.calories} kcal / ${displayUnit}</p>
+                        </div>
+                        <div class="btn-add-small">+ Select</div>
+                    `;
+                    
+                    // Open Modal on click
+                    div.addEventListener('click', () => openLogModal(id, food));
+                    resultsContainer.appendChild(div);
+                });
+            });
+        }
+
+        // 2. Modal UI Logic
+        function setupLogModal() {
+            const modal = document.getElementById('log-modal');
+            const btnCancel = document.getElementById('btn-cancel-log');
+            const btnConfirm = document.getElementById('btn-confirm-log');
+            const mealPills = document.querySelectorAll('.meal-pill');
+
+            // Close Modal
+            btnCancel.addEventListener('click', closeLogModal);
+
+            // Meal Category Selection
+            mealPills.forEach(pill => {
+                pill.addEventListener('click', (e) => {
+                    // Reset all
+                    mealPills.forEach(p => p.classList.remove('active'));
+                    // Set active
+                    e.target.classList.add('active');
+                    selectedMealCategory = e.target.getAttribute('data-meal');
+                });
+            });
+
+            // Submit / Log Food
+            btnConfirm.addEventListener('click', handleLogFoodSubmission);
+        }
+
+        function openLogModal(id, food) {
+            activeSelectedId = id;
+            activeSelectedFood = food;
+            
+            // Populate Modal UI
+            document.getElementById('modal-title').innerText = food.name;
+            const unitText = food.baseUnit === 'item' ? '1 item' : '100g';
+            document.getElementById('modal-subtitle').innerText = `Baseline: ${food.calories} kcal per ${unitText}`;
+            
+            const qtyLabel = document.getElementById('log-qty-label');
+            qtyLabel.innerText = food.baseUnit === 'item' ? 'Quantity Consumed (Items)' : 'Quantity Consumed (Grams)';
+            
+            // Reset input and show modal
+            document.getElementById('log-qty').value = '';
+            document.getElementById('log-modal').classList.add('active');
+            document.getElementById('log-qty').focus();
+        }
+
+        function closeLogModal() {
+            document.getElementById('log-modal').classList.remove('active');
+            activeSelectedFood = null;
+            activeSelectedId = null;
+        }
+
+        // Utility: Get YYYY-MM-DD for local timezone
+        function getLocalYYYYMMDD() {
+            const now = new Date();
+            const offset = now.getTimezoneOffset();
+            const localDate = new Date(now.getTime() - (offset*60*1000));
+            return localDate.toISOString().split('T')[0];
+        }
+
+        // 3. Math Engine & Save Logic
+        function handleLogFoodSubmission() {
+            const qtyInput = document.getElementById('log-qty').value;
+            const consumedQty = parseFloat(qtyInput);
+
+            if (!consumedQty || consumedQty <= 0) {
+                alert("Please enter a valid quantity.");
+                return;
+            }
+
+            // --- THE MATH ENGINE ---
+            const multiplier = consumedQty / activeSelectedFood.baseQty;
+            
+            // Calculate and safely round to 1 decimal place
+            const loggedCalories = Math.round((activeSelectedFood.calories * multiplier) * 10) / 10;
+            const loggedProtein = Math.round((activeSelectedFood.protein * multiplier) * 10) / 10;
+            const loggedCarbs = Math.round((activeSelectedFood.carbs * multiplier) * 10) / 10;
+            const loggedFat = Math.round((activeSelectedFood.fat * multiplier) * 10) / 10;
+            const loggedFiber = Math.round(((activeSelectedFood.fiber || 0) * multiplier) * 10) / 10;
+
+            // --- SNAPSHOT CONSTRUCTION ---
+            const foodSnapshot = {
+                logId: 'log_' + Date.now() + Math.random().toString(36).substr(2, 5), // Bulletproof Unique ID
+                loggedAt: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                id: activeSelectedId,
+                name: activeSelectedFood.name,
+                consumedQty: consumedQty,
+                unit: activeSelectedFood.baseUnit,
+                // Saving Base Stats for bulletproof Edit logic later
+                baseQty: activeSelectedFood.baseQty,
+                baseCalories: activeSelectedFood.calories,
+                baseProtein: activeSelectedFood.protein,
+                baseCarbs: activeSelectedFood.carbs,
+                baseFat: activeSelectedFood.fat,
+                baseFiber: activeSelectedFood.fiber || 0,
+                // Logged calculations
+                calories: loggedCalories,
+                protein: loggedProtein,
+                carbs: loggedCarbs,
+                fat: loggedFat,
+                fiber: loggedFiber,
+                timestamp: Date.now() // Useful for sorting chronological order inside a meal
+            };
+
+            // --- STATE MANAGEMENT ---
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+
+            // Initialize today's structure if it doesn't exist
+            if (!state.dailyLogs[dateKey]) {
+                state.dailyLogs[dateKey] = {
+                    totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+                    meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
+                };
+            }
+            // Ensure miscellaneous exists for older records
+            if (!state.dailyLogs[dateKey].meals.miscellaneous) {
+                state.dailyLogs[dateKey].meals.miscellaneous = [];
+            }
+
+            // 1. Push Snapshot to Meal Array
+            state.dailyLogs[dateKey].meals[selectedMealCategory].push(foodSnapshot);
+
+            // 2. Update Daily Totals
+            const totals = state.dailyLogs[dateKey].totals;
+            totals.calories = Math.round((totals.calories + loggedCalories) * 10) / 10;
+            totals.protein = Math.round((totals.protein + loggedProtein) * 10) / 10;
+            totals.carbs = Math.round((totals.carbs + loggedCarbs) * 10) / 10;
+            totals.fat = Math.round((totals.fat + loggedFat) * 10) / 10;
+            totals.fiber = Math.round((totals.fiber + loggedFiber) * 10) / 10;
+
+            // Save back to DB
+            saveState(state);
+
+            // Update UI
+            renderDailyLog();
+            renderDashboard();
+
+            // --- UI FEEDBACK ---
+            const confirmBtn = document.getElementById('btn-confirm-log');
+            const originalText = confirmBtn.innerText;
+            
+            confirmBtn.style.backgroundColor = "rgba(0, 255, 102, 0.1)";
+            confirmBtn.style.color = "var(--accent-emerald)";
+            confirmBtn.style.borderColor = "rgba(0, 255, 102, 0.3)";
+            confirmBtn.innerText = "Logged!";
+
+            setTimeout(() => {
+                // Reset button
+                confirmBtn.style = "";
+                confirmBtn.innerText = originalText;
+                
+                // Clear search and close modal
+                document.getElementById('food-search-input').value = '';
+                document.getElementById('search-results-container').innerHTML = '';
+                closeLogModal();
+            }, 600);
+        }
+
+        /**
+         * --- PHASE 3 EXPANSION: DAILY LOG TIMELINE, EDIT, AND DELETE LOGIC ---
+         */
+
+        // Render the visual timeline for today
+        function renderDailyLog() {
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+            const logContainer = document.getElementById('daily-log-container');
+            logContainer.innerHTML = ''; // Clear current UI
+
+            const todayLog = state.dailyLogs[dateKey];
+            if (!todayLog) {
+                logContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Nothing logged today yet. Search and add foods above!</p>';
+                return;
+            }
+
+            // Define rendering order
+            const categories = ['breakfast', 'lunch', 'snack', 'dinner', 'miscellaneous'];
+            let hasItems = false;
+
+            categories.forEach(category => {
+                const items = todayLog.meals[category];
+                if (items && items.length > 0) {
+                    hasItems = true;
+
+                    // Create Category Container
+                    const block = document.createElement('div');
+                    block.className = 'log-category-block';
+                    
+                    // Inject Category Header
+                    block.innerHTML = `<div class="log-category-header">${category}</div>`;
+
+                    // Inject Items
+                    items.forEach(item => {
+                        const displayUnit = item.unit === 'item' ? 'items' : 'g';
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'log-item';
+                        itemEl.innerHTML = `
+                            <div class="log-item-details">
+                                <h4>${item.name}</h4>
+                                <div class="log-item-meta">
+                                    <span class="timestamp">${item.loggedAt || 'Just now'}</span>
+                                    <span>${item.consumedQty} ${displayUnit}</span>
+                                </div>
+                                <div class="log-item-macros">
+                                    ${item.calories} kcal <span>|</span> ${item.protein}g P <span>|</span> ${item.carbs}g C <span>|</span> ${item.fat}g F <span>|</span> ${item.fiber || 0}g Fib
+                                </div>
+                            </div>
+                            <div class="log-actions">
+                                <button class="edit-btn edit-log-btn" data-category="${category}" data-logid="${item.logId}">Edit</button>
+                                <button class="delete-btn delete-log-btn" data-category="${category}" data-logid="${item.logId}">Delete</button>
+                            </div>
+                        `;
+                        block.appendChild(itemEl);
+                    });
+
+                    logContainer.appendChild(block);
+                }
+            });
+
+            if (!hasItems) {
+                logContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Nothing logged today yet. Search and add foods above!</p>';
+            }
+        }
+
+        // Establish the Event Delegation logic for dynamic log items
+        function setupDailyLogDelegation() {
+            const container = document.getElementById('daily-log-container');
+            if (!container) return;
+            
+            container.addEventListener('click', function(e) {
+                const target = e.target;
+
+                // Handle Delete Click
+                if (target.classList.contains('delete-log-btn')) {
+                    const category = target.getAttribute('data-category');
+                    const logId = target.getAttribute('data-logid');
+                    deleteDailyLog(category, logId); 
+                }
+
+                // Handle Edit Click
+                if (target.classList.contains('edit-log-btn')) {
+                    const category = target.getAttribute('data-category');
+                    const logId = target.getAttribute('data-logid');
+                    editDailyLog(category, logId);
+                }
+            });
+        }
+
+        // --- PHASE 5: CUSTOM MODAL LOGIC FOR EDIT & DELETE ---
+
+        function setupCustomModals() {
+            document.getElementById('btn-confirm-edit').addEventListener('click', confirmEditLog);
+            document.getElementById('btn-confirm-delete').addEventListener('click', confirmDeleteLog);
+            document.getElementById('btn-confirm-settings').addEventListener('click', confirmSettingsSave);
+        }
+
+        window.closeCustomModals = function() {
+            document.getElementById('custom-edit-modal').classList.remove('active');
+            document.getElementById('custom-delete-modal').classList.remove('active');
+            document.getElementById('settings-modal').classList.remove('active');
+            document.getElementById('edit-log-qty').value = ''; // Clear inputs
+        };
+
+        // Open Settings Modal
+        window.openSettingsModal = function() {
+            const state = getState();
+            const set = state.userSettings;
+
+            document.getElementById('set-cal').value = set.maxCalories;
+            document.getElementById('set-pro').value = set.maxProtein;
+            document.getElementById('set-carb').value = set.maxCarbs;
+            document.getElementById('set-fat').value = set.maxFat;
+            document.getElementById('set-fib').value = set.maxFiber || 30;
+
+            document.getElementById('settings-modal').classList.add('active');
+        };
+
+        // Execute Settings Save
+        function confirmSettingsSave() {
+            const state = getState();
+            
+            const newCal = parseInt(document.getElementById('set-cal').value);
+            const newPro = parseInt(document.getElementById('set-pro').value);
+            const newCarb = parseInt(document.getElementById('set-carb').value);
+            const newFat = parseInt(document.getElementById('set-fat').value);
+            const newFib = parseInt(document.getElementById('set-fib').value);
+
+            if (!newCal || !newPro || !newCarb || !newFat || !newFib) {
+                alert("Please fill out all targets accurately.");
+                return;
+            }
+
+            state.userSettings = {
+                maxCalories: newCal,
+                maxProtein: newPro,
+                maxCarbs: newCarb,
+                maxFat: newFat,
+                maxFiber: newFib
+            };
+
+            saveState(state);
+            closeCustomModals();
+            
+            // Re-render instantly based on new limits
+            renderDashboard(); 
+        }
+
+        // Open Delete Modal
+        function deleteDailyLog(category, logId) {
+            const confirmBtn = document.getElementById('btn-confirm-delete');
+            confirmBtn.dataset.category = category;
+            confirmBtn.dataset.logid = logId;
+            document.getElementById('custom-delete-modal').classList.add('active');
+        }
+
+        // Execute Delete Action
+        function confirmDeleteLog(e) {
+            const btn = e.target;
+            const category = btn.dataset.category;
+            const logId = btn.dataset.logid;
+
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+            const logDay = state.dailyLogs[dateKey];
+            
+            if (!logDay || !logDay.meals[category]) return;
+
+            const itemsArray = logDay.meals[category];
+            const itemToRemove = itemsArray.find(i => i.logId === logId);
+            
+            if (!itemToRemove) return;
+
+            // 1. Reverse math carefully using rounded calculations
+            logDay.totals.calories = Math.max(0, Math.round((logDay.totals.calories - itemToRemove.calories) * 10) / 10);
+            logDay.totals.protein = Math.max(0, Math.round((logDay.totals.protein - itemToRemove.protein) * 10) / 10);
+            logDay.totals.carbs = Math.max(0, Math.round((logDay.totals.carbs - itemToRemove.carbs) * 10) / 10);
+            logDay.totals.fat = Math.max(0, Math.round((logDay.totals.fat - itemToRemove.fat) * 10) / 10);
+            logDay.totals.fiber = Math.max(0, Math.round((logDay.totals.fiber - (itemToRemove.fiber || 0)) * 10) / 10);
+
+            // 2. Remove the item using .filter() as requested
+            logDay.meals[category] = itemsArray.filter(i => i.logId !== logId);
+
+            // 3. Save, hide modal, and re-render updates
+            saveState(state);
+            closeCustomModals();
+            renderDailyLog();
+            renderDashboard(); // Synchronizes the macro rings
+        }
+
+        // Open Edit Modal
+        function editDailyLog(category, logId) {
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+            const logDay = state.dailyLogs[dateKey];
+            
+            if (!logDay || !logDay.meals[category]) return;
+
+            const item = logDay.meals[category].find(i => i.logId === logId);
+            if (!item) return;
+
+            // Pre-fill existing quantity
+            document.getElementById('edit-log-qty').value = item.consumedQty;
+
+            // Attach data to confirm button
+            const confirmBtn = document.getElementById('btn-confirm-edit');
+            confirmBtn.dataset.category = category;
+            confirmBtn.dataset.logid = logId;
+
+            document.getElementById('custom-edit-modal').classList.add('active');
+        }
+
+        // Execute Edit Action
+        function confirmEditLog(e) {
+            const btn = e.target;
+            const category = btn.dataset.category;
+            const logId = btn.dataset.logid;
+            
+            const newQtyInput = document.getElementById('edit-log-qty').value;
+            const newQty = parseFloat(newQtyInput);
+
+            if (isNaN(newQty) || newQty <= 0) {
+                // Flash red border for UI feedback instead of native alert
+                const inputEl = document.getElementById('edit-log-qty');
+                inputEl.style.borderColor = '#ff4444';
+                setTimeout(() => inputEl.style.borderColor = '', 1500);
+                return;
+            }
+
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+            const logDay = state.dailyLogs[dateKey];
+            
+            if (!logDay || !logDay.meals[category]) return;
+
+            const item = logDay.meals[category].find(i => i.logId === logId);
+            if (!item) return;
+
+            // 1. First, reverse the OLD math from the totals
+            logDay.totals.calories = Math.max(0, Math.round((logDay.totals.calories - item.calories) * 10) / 10);
+            logDay.totals.protein = Math.max(0, Math.round((logDay.totals.protein - item.protein) * 10) / 10);
+            logDay.totals.carbs = Math.max(0, Math.round((logDay.totals.carbs - item.carbs) * 10) / 10);
+            logDay.totals.fat = Math.max(0, Math.round((logDay.totals.fat - item.fat) * 10) / 10);
+            logDay.totals.fiber = Math.max(0, Math.round((logDay.totals.fiber - (item.fiber || 0)) * 10) / 10);
+
+            // 2. Recalculate using base stats if we have them, or derive if it's an old legacy entry
+            const baseQty = item.baseQty || item.consumedQty; 
+            const baseCal = item.baseCalories !== undefined ? item.baseCalories : item.calories;
+            const basePro = item.baseProtein !== undefined ? item.baseProtein : item.protein;
+            const baseCarb = item.baseCarbs !== undefined ? item.baseCarbs : item.carbs;
+            const baseFat = item.baseFat !== undefined ? item.baseFat : item.fat;
+            const baseFib = item.baseFiber !== undefined ? item.baseFiber : (item.fiber || 0);
+
+            const multiplier = newQty / baseQty;
+
+            const newCal = Math.round((baseCal * multiplier) * 10) / 10;
+            const newPro = Math.round((basePro * multiplier) * 10) / 10;
+            const newCarb = Math.round((baseCarb * multiplier) * 10) / 10;
+            const newFat = Math.round((baseFat * multiplier) * 10) / 10;
+            const newFib = Math.round((baseFib * multiplier) * 10) / 10;
+
+            // 3. Update the item's snapshot data
+            item.consumedQty = newQty;
+            item.calories = newCal;
+            item.protein = newPro;
+            item.carbs = newCarb;
+            item.fat = newFat;
+            item.fiber = newFib;
+
+            // 4. Add the NEW math to the totals
+            logDay.totals.calories = Math.round((logDay.totals.calories + newCal) * 10) / 10;
+            logDay.totals.protein = Math.round((logDay.totals.protein + newPro) * 10) / 10;
+            logDay.totals.carbs = Math.round((logDay.totals.carbs + newCarb) * 10) / 10;
+            logDay.totals.fat = Math.round((logDay.totals.fat + newFat) * 10) / 10;
+            logDay.totals.fiber = Math.round((logDay.totals.fiber + newFib) * 10) / 10;
+
+            // 5. Save, close modal, and re-render
+            saveState(state);
+            closeCustomModals();
+            renderDailyLog();
+            renderDashboard(); // Synchronizes the macro rings
+        }
+
+        /**
+         * --- PHASE 4: DASHBOARD & GAMIFICATION LOGIC ---
+         */
+        
+        let appCharts = {}; // Track chart instances globally to destroy/recreate them
+        let globalActiveDateKey = getLocalYYYYMMDD(); // For the Midnight Patch
+
+        // 1. Core Render logic
+        function renderDashboard() {
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+            const todayLog = state.dailyLogs[dateKey] || { totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 } };
+            const settings = state.userSettings;
+
+            // Check Limits (shifts CSS variables if exceeded)
+            if (todayLog.totals.calories > settings.maxCalories) {
+                document.body.classList.add('limit-exceeded');
+            } else {
+                document.body.classList.remove('limit-exceeded');
+            }
+
+            // Create/Update Rings
+            createRingChart('calChart', todayLog.totals.calories, settings.maxCalories, '--accent-blue');
+            createRingChart('proChart', todayLog.totals.protein, settings.maxProtein, '--accent-emerald');
+            createRingChart('carbChart', todayLog.totals.carbs, settings.maxCarbs, '--accent-violet');
+            createRingChart('fatChart', todayLog.totals.fat, settings.maxFat, '#ff9900', true); // raw hex fallback
+            createRingChart('fibChart', todayLog.totals.fiber || 0, settings.maxFiber || 30, '--accent-pink'); // Fiber Ring
+
+            // Update Center Texts
+            document.getElementById('text-cal-val').innerText = Math.round(todayLog.totals.calories);
+            document.getElementById('text-cal-max').innerText = `/ ${settings.maxCalories} kcal`;
+            
+            document.getElementById('text-pro-val').innerText = todayLog.totals.protein;
+            document.getElementById('text-pro-max').innerText = `/ ${settings.maxProtein}g`;
+            
+            document.getElementById('text-carb-val').innerText = todayLog.totals.carbs;
+            document.getElementById('text-carb-max').innerText = `/ ${settings.maxCarbs}g`;
+            
+            document.getElementById('text-fat-val').innerText = todayLog.totals.fat;
+            document.getElementById('text-fat-max').innerText = `/ ${settings.maxFat}g`;
+            
+            document.getElementById('text-fib-val').innerText = todayLog.totals.fiber || 0;
+            document.getElementById('text-fib-max').innerText = `/ ${settings.maxFiber || 30}g`;
+
+            renderCalendar(state);
+        }
+
+        // 2. ChartJS Helper
+        function createRingChart(canvasId, currentValue, maxValue, cssVarName, isRawColor = false) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            // Fetch dynamic CSS variables (including .limit-exceeded overrides)
+            const rootStyle = getComputedStyle(document.body);
+            const mainColor = isRawColor ? cssVarName : rootStyle.getPropertyValue(cssVarName).trim();
+            const emptyColor = 'rgba(255, 255, 255, 0.05)';
+
+            // Destroy previous instance
+            if (appCharts[canvasId]) {
+                appCharts[canvasId].destroy();
+            }
+
+            const safeValue = Math.min(currentValue, maxValue);
+            const remainder = Math.max(maxValue - currentValue, 0);
+
+            appCharts[canvasId] = new Chart(canvas.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Logged', 'Remaining'],
+                    datasets: [{
+                        data: [safeValue, remainder],
+                        backgroundColor: [mainColor, emptyColor],
+                        borderWidth: 0,
+                        hoverOffset: 0
+                    }]
+                },
+                options: {
+                    cutout: '80%',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { animateScale: true, animateRotate: true },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+        }
+
+        // 3. 30-Day Streak Calendar
+        function renderCalendar(state) {
+            const maxCal = state.userSettings.maxCalories;
+            const targetProtein = state.userSettings.maxProtein * 0.8; // Phase 6 Requirement
+            let currentStreak = 0;
+            let breakFound = false;
+
+            // Step A: Calculate Streak
+            for(let i=0; i<30; i++) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const offset = d.getTimezoneOffset();
+                const localD = new Date(d.getTime() - (offset*60*1000));
+                const dateKey = localD.toISOString().split('T')[0];
+                
+                const log = state.dailyLogs[dateKey];
+                
+                if (i === 0) {
+                    if (!log || log.totals.calories === 0) {
+                        // Today has no entries yet, doesn't break or add to streak
+                        continue;
+                    } else if (log.totals.calories > maxCal) {
+                        breakFound = true; // Today is over limit, streak broken immediately
+                    } else {
+                        currentStreak++; // Today is logged and under cal limit
+                    }
+                } else {
+                    if (!breakFound) {
+                        if (log && log.totals.calories > 0 && log.totals.calories <= maxCal) {
+                            currentStreak++;
+                        } else {
+                            breakFound = true;
+                        }
+                    }
+                }
+            }
+
+            document.getElementById('streak-counter').innerText = currentStreak;
+
+            // Trigger Confetti on 7+ Streak!
+            if (currentStreak >= 7 && !window.confettiFired) {
+                setTimeout(() => confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } }), 500);
+                window.confettiFired = true; // prevent re-firing on soft re-renders
+            }
+
+            // Step B: Generate Grid visually
+            const calendarGrid = document.getElementById('streak-grid');
+            calendarGrid.innerHTML = '';
+
+            // Generate past 30 days chronologically (left to right)
+            for(let i=29; i>=0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const offset = d.getTimezoneOffset();
+                const localD = new Date(d.getTime() - (offset*60*1000));
+                const dateKey = localD.toISOString().split('T')[0];
+
+                const log = state.dailyLogs[dateKey];
+                const box = document.createElement('div');
+                box.className = 'calendar-day';
+                
+                // Advanced Gamification Conditions
+                if (!log || log.totals.calories === 0) {
+                    box.classList.add('empty');
+                    box.innerHTML = `<span></span>`;
+                } else if (log.totals.calories <= maxCal) {
+                    box.classList.add('success');
+                    
+                    // Condition B & C: Protein Check
+                    if (log.totals.protein >= targetProtein) {
+                        // Condition B (Perfect Day)
+                        box.innerHTML = currentStreak >= 7 ? '🏆' : '🔥';
+                    } else {
+                        // Condition C (Survived, but missed Protein)
+                        box.innerHTML = '🕯️';
+                        box.title = `${dateKey}: ${log.totals.calories} kcal (Protein goal missed)`;
+                    }
+                } else {
+                    // Condition A (Failure)
+                    box.classList.add('failed');
+                    box.innerHTML = '❌';
+                }
+                
+                // Set default title if not set by protein miss
+                if(!box.title) {
+                    box.title = `${dateKey}: ${log ? log.totals.calories + ' kcal' : 'No data'}`;
+                }
+                
+                calendarGrid.appendChild(box);
+            }
+        }
+
+        // 4. The Midnight Patch (Listen for tab returning to foreground)
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) {
+                const nowKey = getLocalYYYYMMDD();
+                if (nowKey !== globalActiveDateKey) {
+                    globalActiveDateKey = nowKey;
+                    console.log("Midnight passed! Re-rendering dashboard for new day.");
+                    renderDashboard(); 
+                }
+            }
+        });
+
+        // Boot up the application
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeStore();
+            setupNavigation();
+            
+            // Phase 2 Initializations
+            setupLibraryForm();
+            renderLibrary();
+
+            // Phase 3 Initializations
+            setupLoggerSearch();
+            setupLogModal();
+            setupDailyLogDelegation();
+            setupCustomModals(); // Initialize new Modals
+            renderDailyLog();
+
+            // Phase 4 Initializations
+            renderDashboard();
+        });
+
+    </script>
+</body>
+</html>
