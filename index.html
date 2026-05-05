@@ -227,6 +227,22 @@
             margin-top: 24px;
         }
 
+        .water-bottle {
+            width: 30px;
+            height: 60px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            background-color: transparent;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .water-bottle.full {
+            background-color: var(--accent-blue);
+            opacity: 0.8;
+            box-shadow: 0 0 10px var(--accent-blue);
+        }
+
         h1 {
             font-size: 32px;
             font-weight: 600;
@@ -1146,6 +1162,13 @@
                 </div>
             </div>
 
+            <div class="water-tracker-container glass-panel" style="margin-top: 24px; margin-bottom: 24px;">
+                <h3 style="margin-bottom: 16px; font-size: 18px; color: var(--text-primary);">Hydration</h3>
+                <div id="water-bottles-container" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                   <!-- JavaScript will dynamically inject bottles here -->
+                </div>
+            </div>
+
             <!-- Phase 7: Full Interactive Calendar -->
             <div class="streak-section">
                 <div class="calendar-header">
@@ -1345,6 +1368,10 @@
                     <label for="set-fib">Fiber (g)</label>
                     <input type="number" id="set-fib" required min="1">
                 </div>
+                <div class="input-group">
+                    <label for="set-water">Water Target (L)</label>
+                    <input type="number" id="set-water" required min="1">
+                </div>
             </div>
 
             <div class="flex-buttons">
@@ -1368,7 +1395,7 @@
             },
             dailyLogs: {
                 "2023-10-27": {
-                    totals: { calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1 },
+                    totals: { calories: 325, protein: 6.8, carbs: 70, fat: 0.8, fiber: 1, water: 0 },
                     meals: { 
                         breakfast: [], 
                         lunch: [
@@ -1386,7 +1413,8 @@
                 maxProtein: 150,
                 maxCarbs: 200,
                 maxFat: 65,
-                maxFiber: 30
+                maxFiber: 30,
+                targetWater: 4
             }
         };
 
@@ -1403,9 +1431,13 @@
                 if (parsed.userSettings && parsed.userSettings.maxFiber === undefined) {
                     parsed.userSettings.maxFiber = 30;
                 }
+                if (parsed.userSettings && parsed.userSettings.targetWater === undefined) {
+                    parsed.userSettings.targetWater = 4;
+                }
                 
                 Object.values(parsed.dailyLogs).forEach(log => {
                     if (log.totals && log.totals.fiber === undefined) log.totals.fiber = 0;
+                    if (log.totals && log.totals.water === undefined) log.totals.water = 0;
                     Object.values(log.meals).forEach(mealArr => {
                         mealArr.forEach(item => {
                             if (item.fiber === undefined) item.fiber = 0;
@@ -1884,7 +1916,7 @@
             // Initialize today's structure if it doesn't exist
             if (!state.dailyLogs[dateKey]) {
                 state.dailyLogs[dateKey] = {
-                    totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+                    totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 },
                     meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
                 };
             }
@@ -2047,6 +2079,7 @@
             document.getElementById('set-carb').value = set.maxCarbs;
             document.getElementById('set-fat').value = set.maxFat;
             document.getElementById('set-fib').value = set.maxFiber || 30;
+            document.getElementById('set-water').value = set.targetWater || 4;
 
             document.getElementById('settings-modal').classList.add('active');
         };
@@ -2060,8 +2093,9 @@
             const newCarb = parseInt(document.getElementById('set-carb').value);
             const newFat = parseInt(document.getElementById('set-fat').value);
             const newFib = parseInt(document.getElementById('set-fib').value);
+            const newWater = parseInt(document.getElementById('set-water').value);
 
-            if (!newCal || !newPro || !newCarb || !newFat || !newFib) {
+            if (!newCal || !newPro || !newCarb || !newFat || !newFib || !newWater) {
                 alert("Please fill out all targets accurately.");
                 return;
             }
@@ -2071,7 +2105,8 @@
                 maxProtein: newPro,
                 maxCarbs: newCarb,
                 maxFat: newFat,
-                maxFiber: newFib
+                maxFiber: newFib,
+                targetWater: newWater
             };
 
             saveState(state);
@@ -2237,10 +2272,36 @@
         }
 
         // 1. Core Render logic
+        function renderWaterTracker() {
+            const state = getState();
+            const dateKey = getLocalYYYYMMDD();
+            const targetWater = state.userSettings.targetWater || 4;
+
+            if (!state.dailyLogs[dateKey]) {
+                state.dailyLogs[dateKey] = {
+                    totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 },
+                    meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
+                };
+            }
+
+            let currentWater = state.dailyLogs[dateKey].totals.water || 0;
+            const bottlesCount = Math.max(targetWater, currentWater);
+            const container = document.getElementById('water-bottles-container');
+
+            container.innerHTML = ''; // Clear existing
+
+            for (let i = 1; i <= bottlesCount; i++) {
+                const bottle = document.createElement('div');
+                bottle.className = `water-bottle ${i <= currentWater ? 'full' : ''}`;
+                bottle.setAttribute('data-index', i);
+                container.appendChild(bottle);
+            }
+        }
+
         function renderDashboard() {
             const state = getState();
             const dateKey = getLocalYYYYMMDD();
-            const todayLog = state.dailyLogs[dateKey] || { totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 } };
+            const todayLog = state.dailyLogs[dateKey] || { totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 } };
             const settings = state.userSettings;
 
             // Check Limits (shifts CSS variables if exceeded)
@@ -2272,6 +2333,8 @@
             
             document.getElementById('text-fib-val').innerText = todayLog.totals.fiber || 0;
             document.getElementById('text-fib-max').innerText = `/ ${settings.maxFiber || 30}g`;
+
+            renderWaterTracker();
 
             renderCalendar(currentViewDate); // Now passes the state variable date
         }
@@ -2488,6 +2551,37 @@
 
             // Phase 4 & 7 Initializations
             renderDashboard();
+
+            // Water Tracker Initialization
+            document.getElementById('water-bottles-container').addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('water-bottle')) {
+                    const state = getState();
+                    const dateKey = getLocalYYYYMMDD();
+
+                    if (!state.dailyLogs[dateKey]) {
+                        state.dailyLogs[dateKey] = {
+                            totals: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, water: 0 },
+                            meals: { breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [] }
+                        };
+                    }
+
+                    let currentWater = state.dailyLogs[dateKey].totals.water || 0;
+                    const clickedIndex = parseInt(e.target.getAttribute('data-index'));
+                    let newWater = currentWater;
+
+                    if (clickedIndex > currentWater) {
+                        newWater = clickedIndex; // clicked empty bottle
+                    } else if (clickedIndex === currentWater) {
+                        newWater = currentWater - 1; // clicked last full bottle (undo)
+                    } else {
+                        newWater = clickedIndex; // clicked full bottle before last
+                    }
+
+                    state.dailyLogs[dateKey].totals.water = newWater;
+                    saveState(state);
+                    renderWaterTracker();
+                }
+            });
         });
 
     </script>

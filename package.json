@@ -1,0 +1,24 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "> you eat it. you log it. you question your life choices.",
+  "main": "test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CosmicDorito-25/SnackTax.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/CosmicDorito-25/SnackTax/issues"
+  },
+  "homepage": "https://github.com/CosmicDorito-25/SnackTax#readme",
+  "dependencies": {
+    "playwright": "^1.59.1"
+  }
+}
