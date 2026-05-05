@@ -299,7 +299,8 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        input[type="text"], input[type="number"] {
+        /* Phase 13: Added input[type="date"] */
+        input[type="text"], input[type="number"], input[type="date"] {
             width: 100%;
             padding: 14px 16px;
             background: rgba(0, 0, 0, 0.3);
@@ -309,8 +310,9 @@
             font-size: 15px;
             outline: none;
             transition: all var(--transition-smooth);
+            color-scheme: dark; /* Helps date picker calendar inherit dark mode */
         }
-        input[type="text"]:focus, input[type="number"]:focus {
+        input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus {
             border-color: var(--accent-blue);
             box-shadow: 0 0 16px rgba(0, 240, 255, 0.15);
             background: rgba(0, 0, 0, 0.5);
@@ -1306,7 +1308,10 @@
                     <h2>Overview</h2>
                     <p>Your daily metabolic snapshot.</p>
                 </div>
-                <button id="edit-targets-btn" class="edit-targets-btn" onclick="openSettingsModal()">Edit Targets</button>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <button id="dev-inject-data-btn" class="edit-targets-btn" style="background: rgba(255, 68, 68, 0.1); color: #ff4444; border-color: rgba(255, 68, 68, 0.3);">TEST: Inject Data</button>
+                    <button id="edit-targets-btn" class="edit-targets-btn" onclick="openSettingsModal()">Edit Targets</button>
+                </div>
             </div>
             
             <!-- Phase 4: Charts Grid -->
@@ -1491,6 +1496,8 @@
             
             <div style="display: flex; gap: 16px; margin-bottom: 24px;">
                 <button id="btn-view-past-data" class="btn-secondary" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="openSelectDateMode()">View Past Data</button>
+                <!-- Phase 13: Added Export Data Button -->
+                <button id="btn-export-data" class="btn-secondary" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="openExportModal()">Export Data</button>
                 <button id="btn-close-history" class="btn-secondary hidden" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="closeHistoricalView()">Back to Activity Stream</button>
             </div>
 
@@ -1656,6 +1663,46 @@
             <div class="flex-buttons">
                 <button type="button" class="btn-secondary" onclick="closeCustomModals()">Cancel</button>
                 <button type="button" class="btn-primary flex-2" id="btn-confirm-settings">Save Targets</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phase 13: Export Modal -->
+    <div id="export-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="margin-bottom: 4px; font-size: 24px;">Export Data</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">Download your nutrition history.</p>
+
+            <div class="input-group">
+                <label>Export Format</label>
+                <div class="segmented-control">
+                    <input type="radio" id="format-json" name="export-format" value="json" checked>
+                    <label for="format-json">JSON (Full Backup)</label>
+                    <input type="radio" id="format-csv" name="export-format" value="csv">
+                    <label for="format-csv">CSV (Ledger)</label>
+                </div>
+                <p id="csv-warning" class="hidden" style="color: #ff9900; font-size: 11px; margin-top: 8px;">Note: CSV files cannot be imported back into the app.</p>
+            </div>
+
+            <div class="input-group" style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="export-all-time" checked style="width: auto;">
+                <label for="export-all-time" style="margin: 0; text-transform: none; letter-spacing: 0;">All Time (Entire Database)</label>
+            </div>
+
+            <div class="macros-grid" id="export-date-range" style="opacity: 0.5; pointer-events: none;">
+                <div class="input-group">
+                    <label for="export-start-date">Start Date</label>
+                    <input type="date" id="export-start-date" disabled>
+                </div>
+                <div class="input-group">
+                    <label for="export-end-date">End Date</label>
+                    <input type="date" id="export-end-date" disabled>
+                </div>
+            </div>
+
+            <div class="flex-buttons">
+                <button type="button" class="btn-secondary" onclick="closeCustomModals()">Cancel</button>
+                <button type="button" class="btn-primary flex-2" id="btn-confirm-export">Download</button>
             </div>
         </div>
     </div>
@@ -2532,17 +2579,54 @@
         }
 
         // --- PHASE 5: CUSTOM MODAL LOGIC FOR EDIT & DELETE ---
+        // --- PHASE 13: ADDED EXPORT MODAL LISTENERS ---
 
         function setupCustomModals() {
             document.getElementById('btn-confirm-edit').addEventListener('click', confirmEditLog);
             document.getElementById('btn-confirm-delete').addEventListener('click', confirmDeleteLog);
             document.getElementById('btn-confirm-settings').addEventListener('click', confirmSettingsSave);
+            
+            // Phase 13 Setup
+            const formatRadios = document.querySelectorAll('input[name="export-format"]');
+            const warning = document.getElementById('csv-warning');
+            
+            formatRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    if (e.target.value === 'csv') {
+                        warning.classList.remove('hidden');
+                    } else {
+                        warning.classList.add('hidden');
+                    }
+                });
+            });
+
+            const allTimeCheckbox = document.getElementById('export-all-time');
+            const dateRangeContainer = document.getElementById('export-date-range');
+            const startDate = document.getElementById('export-start-date');
+            const endDate = document.getElementById('export-end-date');
+
+            allTimeCheckbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    dateRangeContainer.style.opacity = '0.5';
+                    dateRangeContainer.style.pointerEvents = 'none';
+                    startDate.disabled = true;
+                    endDate.disabled = true;
+                } else {
+                    dateRangeContainer.style.opacity = '1';
+                    dateRangeContainer.style.pointerEvents = 'auto';
+                    startDate.disabled = false;
+                    endDate.disabled = false;
+                }
+            });
+
+            document.getElementById('btn-confirm-export').addEventListener('click', executeExport);
         }
 
         window.closeCustomModals = function() {
             document.getElementById('custom-edit-modal').classList.remove('active');
             document.getElementById('custom-delete-modal').classList.remove('active');
             document.getElementById('settings-modal').classList.remove('active');
+            document.getElementById('export-modal').classList.remove('active');
             document.getElementById('edit-log-qty').value = ''; // Clear inputs
         };
 
@@ -2559,6 +2643,16 @@
             document.getElementById('set-water').value = set.targetWater || 4;
 
             document.getElementById('settings-modal').classList.add('active');
+        };
+        
+        // Phase 13: Open Export Modal
+        window.openExportModal = function() {
+            document.getElementById('export-modal').classList.add('active');
+            
+            // Auto-fill dates to current local date
+            const today = getLocalYYYYMMDD();
+            document.getElementById('export-start-date').value = today;
+            document.getElementById('export-end-date').value = today;
         };
 
         // Execute Settings Save
@@ -3123,6 +3217,7 @@
             document.getElementById('historical-view-container').classList.add('hidden');
             document.getElementById('activity-stream-container').classList.remove('hidden');
             document.getElementById('btn-view-past-data').classList.remove('hidden');
+            document.getElementById('btn-export-data').classList.remove('hidden');
             document.getElementById('btn-close-history').classList.add('hidden');
         };
 
@@ -3135,14 +3230,17 @@
             
             // Render the specific historical view
             renderHistoricalView(dateKey);
+            
+            // Toggle Buttons
+            document.getElementById('btn-view-past-data').classList.add('hidden');
+            document.getElementById('btn-export-data').classList.add('hidden');
+            document.getElementById('btn-close-history').classList.remove('hidden');
         };
 
         function renderHistoricalView(dateKey) {
             // Toggle container visibility
             document.getElementById('historical-view-container').classList.remove('hidden');
             document.getElementById('activity-stream-container').classList.add('hidden');
-            document.getElementById('btn-view-past-data').classList.add('hidden');
-            document.getElementById('btn-close-history').classList.remove('hidden');
 
             const state = getState();
             const logDay = state.dailyLogs[dateKey];
@@ -3251,6 +3349,204 @@
             }
         }
 
+        // --- TEST UTILITY: MOCK DATA INJECTOR ---
+        function injectMockData() {
+            const state = getState();
+            
+            // Helper to get past dates
+            const getPastDateKey = (daysAgo) => {
+                const d = new Date();
+                d.setDate(d.getDate() - daysAgo);
+                return getYYYYMMDD(d);
+            };
+
+            const tMinus1 = getPastDateKey(1);
+            const tMinus3 = getPastDateKey(3);
+            const tMinus5 = getPastDateKey(5);
+
+            // Day 1: Perfect Day (Yesterday)
+            state.dailyLogs[tMinus1] = {
+                totals: { calories: 1850, protein: 140, carbs: 180, fat: 55, fiber: 28, water: 4 },
+                milestones: { cal50: true, cal80: true, cal100: false, calExceeded: false, pro80: true, pro100: false, waterCompleted: true },
+                meals: {
+                    breakfast: [
+                        { id: "mock_food_1", name: "Oatmeal Bowl", consumedQty: 200, unit: "g", calories: 450, protein: 15, carbs: 65, fat: 12, fiber: 8, logId: "log_t1_bf", loggedAt: "08:30 AM", baseQty: 100, baseCalories: 225, baseProtein: 7.5, baseCarbs: 32.5, baseFat: 6, baseFiber: 4 }
+                    ],
+                    lunch: [
+                        { id: "mock_food_2", name: "Grilled Chicken Salad", consumedQty: 1, unit: "item", calories: 600, protein: 55, carbs: 20, fat: 25, fiber: 10, logId: "log_t1_lu", loggedAt: "01:15 PM", baseQty: 1, baseCalories: 600, baseProtein: 55, baseCarbs: 20, baseFat: 25, baseFiber: 10 }
+                    ],
+                    dinner: [], snack: [], miscellaneous: []
+                },
+                activityStream: [
+                    { time: "08:30 AM", type: "food", text: "Logged 200g Oatmeal Bowl for Breakfast", refId: "log_t1_bf", status: "active" },
+                    { time: "09:00 AM", type: "water", text: "Drank 1L of Water (Total: 1L)", refId: "water_1", status: "active" },
+                    { time: "10:30 AM", type: "water", text: "Drank 1L of Water (Total: 2L)", refId: "water_2", status: "deleted" }, // Showing a deleted water
+                    { time: "01:15 PM", type: "food", text: "Logged 1item Grilled Chicken Salad for Lunch", refId: "log_t1_lu", status: "edited" }, // Showing an edited food
+                    { time: "01:15 PM", type: "milestone", text: "🎉 Milestone: Hit 80% of Daily Protein Goal!", refId: "pro80", status: "active" },
+                    { time: "05:00 PM", type: "water", text: "Drank 1L of Water (Total: 4L)", refId: "water_4", status: "active" },
+                    { time: "05:00 PM", type: "milestone", text: "💧 Hydrated: Reached Daily Water Target!", refId: "waterCompleted", status: "active" }
+                ]
+            };
+
+            // Day 2: Light Day (3 Days Ago) - Lots of deleted/edited tests
+            state.dailyLogs[tMinus3] = {
+                totals: { calories: 950, protein: 45, carbs: 120, fat: 30, fiber: 15, water: 1 },
+                milestones: { cal50: false, cal80: false, cal100: false, calExceeded: false, pro80: false, pro100: false, waterCompleted: false },
+                meals: {
+                    breakfast: [], lunch: [], dinner: [], snack: [], miscellaneous: [
+                        { id: "mock_food_3", name: "Protein Bar", consumedQty: 2, unit: "items", calories: 400, protein: 40, carbs: 45, fat: 15, fiber: 5, logId: "log_t3_mi", loggedAt: "03:00 PM", baseQty: 1, baseCalories: 200, baseProtein: 20, baseCarbs: 22.5, baseFat: 7.5, baseFiber: 2.5 }
+                    ]
+                },
+                activityStream: [
+                    { time: "10:00 AM", type: "food", text: "Logged 1item Banana for Breakfast", refId: "log_del_banana", status: "deleted" }, // Deleted log
+                    { time: "03:00 PM", type: "food", text: "Logged 2items Protein Bar for Miscellaneous", refId: "log_t3_mi", status: "active" },
+                    { time: "04:00 PM", type: "water", text: "Drank 1L of Water (Total: 1L)", refId: "water_1", status: "active" }
+                ]
+            };
+
+            // Day 3: Exceeded Limits Day (5 Days Ago)
+            state.dailyLogs[tMinus5] = {
+                totals: { calories: 2500, protein: 110, carbs: 300, fat: 90, fiber: 25, water: 2 },
+                milestones: { cal50: true, cal80: true, cal100: false, calExceeded: true, pro80: false, pro100: false, waterCompleted: false },
+                meals: {
+                    breakfast: [], lunch: [], dinner: [
+                        { id: "mock_food_4", name: "Large Pizza", consumedQty: 1, unit: "item", calories: 2000, protein: 80, carbs: 250, fat: 80, fiber: 10, logId: "log_t5_di", loggedAt: "08:00 PM", baseQty: 1, baseCalories: 2000, baseProtein: 80, baseCarbs: 250, baseFat: 80, baseFiber: 10 }
+                    ], snack: [], miscellaneous: []
+                },
+                activityStream: [
+                    { time: "02:00 PM", type: "water", text: "Drank 2L of Water (Total: 2L)", refId: "water_2", status: "active" },
+                    { time: "08:00 PM", type: "food", text: "Logged 1item Large Pizza for Dinner", refId: "log_t5_di", status: "active" },
+                    { time: "08:00 PM", type: "milestone", text: "⚠️ Warning: Exceeded Daily Calories Limit!", refId: "calExceeded", status: "active" }
+                ]
+            };
+
+            saveState(state);
+            
+            // Re-render UI elements
+            renderDashboard(); // Updates calendar and current charts
+            renderHistoryTimeline(); // Updates timeline
+            
+            alert("Mock data successfully injected for testing! Check the Calendar and Activity Stream.");
+        }
+
+        // --- PHASE 13: EXPORT ENGINE ---
+
+        function prepareExportData(isAllTime, startDateStr, endDateStr) {
+            const state = getState();
+            
+            // 1. Deep Clone to prevent accidental mutations inside the DB
+            const clonedLogs = JSON.parse(JSON.stringify(state.dailyLogs)); 
+            const filteredLogs = {};
+
+            for (const [dateKey, logDay] of Object.entries(clonedLogs)) {
+                let include = true;
+                
+                // 2. Lexicographical string comparison (YYYY-MM-DD) perfectly evades timezone offset bugs
+                if (!isAllTime) {
+                    if (startDateStr && dateKey < startDateStr) include = false;
+                    if (endDateStr && dateKey > endDateStr) include = false;
+                }
+
+                if (include) {
+                    // 3. The Purge (CRITICAL): Permanently remove deleted ghosts from the exported activity stream
+                    if (logDay.activityStream) {
+                        logDay.activityStream = logDay.activityStream.filter(ev => ev.status !== 'deleted');
+                    }
+                    filteredLogs[dateKey] = logDay;
+                }
+            }
+
+            return {
+                userSettings: state.userSettings,
+                foodLibrary: state.foodLibrary,
+                dailyLogs: filteredLogs
+            };
+        }
+
+        function exportToJSON(data) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `NutriTracker_Backup_${getLocalYYYYMMDD()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportToCSV(data) {
+            const logs = data.dailyLogs;
+            // Define Standard Ledger Headers
+            let csvContent = "Date,Time,Category,Item,Quantity,Calories,Protein (g),Carbs (g),Fat (g),Fiber (g)\n";
+
+            // Sort chronologically for readable ledger
+            const sortedDates = Object.keys(logs).sort((a, b) => {
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            });
+
+            sortedDates.forEach(dateKey => {
+                const logDay = logs[dateKey];
+                const categories = ['breakfast', 'lunch', 'snack', 'dinner', 'miscellaneous'];
+
+                categories.forEach(category => {
+                    if (logDay.meals[category]) {
+                        logDay.meals[category].forEach(item => {
+                            const displayUnit = item.unit === 'item' ? 'items' : 'g';
+                            const qtyStr = `${item.consumedQty} ${displayUnit}`;
+                            
+                            // Escape quotes inside item names just in case they typed something weird
+                            const itemName = `"${item.name.replace(/"/g, '""')}"`; 
+                            
+                            // Build Row
+                            csvContent += `${dateKey},${item.loggedAt || '-'},${category.toUpperCase()},${itemName},${qtyStr},${item.calories},${item.protein},${item.carbs},${item.fat},${item.fiber || 0}\n`;
+                        });
+                    }
+                });
+
+                // Inject the Daily Summary Row
+                const t = logDay.totals;
+                csvContent += `${dateKey},END OF DAY,DAILY TOTALS,-,-,${t.calories},${t.protein},${t.carbs},${t.fat},${t.fiber || 0}\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `NutriTracker_Ledger_${getLocalYYYYMMDD()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function executeExport() {
+            const format = document.querySelector('input[name="export-format"]:checked').value;
+            const isAllTime = document.getElementById('export-all-time').checked;
+            const startDate = document.getElementById('export-start-date').value;
+            const endDate = document.getElementById('export-end-date').value;
+
+            // Validate date range inputs
+            if (!isAllTime && (!startDate || !endDate)) {
+                alert("Please provide both start and end dates.");
+                return;
+            }
+            if (!isAllTime && (startDate > endDate)) {
+                alert("Start date cannot be after end date.");
+                return;
+            }
+
+            // Prep the secure payload
+            const exportData = prepareExportData(isAllTime, startDate, endDate);
+
+            // Execute requested format
+            if (format === 'json') {
+                exportToJSON(exportData);
+            } else {
+                exportToCSV(exportData);
+            }
+
+            closeCustomModals();
+        }
+
 
         // 4. The Midnight Patch (Listen for tab returning to foreground)
         document.addEventListener("visibilitychange", () => {
@@ -3269,11 +3565,15 @@
             initializeStore();
             setupNavigation();
             
+            // Test Button Initialization
+            const injectBtn = document.getElementById('dev-inject-data-btn');
+            if(injectBtn) injectBtn.addEventListener('click', injectMockData);
+            
             // Phase 2 Initializations
             setupLibraryForm();
             renderLibrary();
 
-            // Phase 3 & 5 Initializations
+            // Phase 3 & 5 & 13 Initializations
             setupLoggerSearch();
             setupLogModal();
             setupDailyLogDelegation();
