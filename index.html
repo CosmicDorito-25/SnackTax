@@ -209,9 +209,124 @@
 
         .sidebar-footer {
             margin-top: auto;
-            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-top: 24px;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .footer-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 0.5px;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .footer-link, .footer-text {
+            font-size: 12px;
+            font-weight: 500;
             color: var(--text-muted);
-            line-height: 1.6;
+            text-decoration: none;
+            transition: all var(--transition-smooth);
+            display: inline-block;
+            width: fit-content;
+        }
+
+        .footer-link:hover {
+            color: var(--accent-blue);
+            text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+            transform: translateX(2px);
+        }
+
+        .footer-link.kofi-link:hover {
+            color: #ff5e5b; /* Ko-fi brand color */
+            text-shadow: 0 0 8px rgba(255, 94, 91, 0.4);
+        }
+
+        .footer-link.upi-link:hover {
+            color: var(--accent-emerald);
+            text-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
+        }
+
+        /* Fix text wrapping for long UPI IDs */
+        .upi-container {
+            position: relative;
+            width: fit-content;
+        }
+        
+        .footer-link.upi-link {
+            white-space: nowrap;
+            font-size: 11px; /* Dropped by 1px to fit the sidebar constraints */
+        }
+        
+        /* Glassmorphic QR Code Tooltip (Hidden by default) */
+        .qr-tooltip {
+            position: absolute;
+            bottom: 120%; /* Pops up above the link */
+            left: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px);
+            transition: all var(--transition-smooth);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            z-index: 50;
+            pointer-events: none; /* Prevents flickering */
+        }
+        
+        .qr-tooltip img {
+            border-radius: 8px;
+            width: 160px;
+            height: 160px;
+        }
+        
+        .qr-tooltip span {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-emerald);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Reveal tooltip on PC hover */
+        .upi-container:hover .qr-tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .expand-qr-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+            border-radius: 4px;
+            transition: all var(--transition-smooth);
+        }
+
+        .expand-qr-btn:hover {
+            color: var(--accent-emerald);
+            background: rgba(0, 255, 102, 0.1);
         }
 
         @media (max-width: 768px) {
@@ -1339,7 +1454,6 @@
             font-size: 10px;
         }
 
-        /* Phase 18: Clear Data Modal Checkboxes */
         .checkbox-group {
             display: flex;
             align-items: center;
@@ -1396,8 +1510,24 @@
         
         <!-- Sidebar Footer -->
         <div class="sidebar-footer">
-            v1.0.0<br>
-            CosmicFlare25@proton.me
+            <div class="footer-title">Snack Tax v1.0.0</div>
+            <div class="footer-links">
+                <a href="mailto:CosmicFlare25@proton.me" class="footer-link">✉️ CosmicFlare25</a>
+                <a href="https://github.com/CosmicDorito-25" target="_blank" rel="noopener noreferrer" class="footer-link">💻 GitHub Profile</a>
+                <a href="https://ko-fi.com/cosmicdorito#payment-widget" target="_blank" rel="noopener noreferrer" class="footer-link kofi-link">☕ Buy me a Coffee</a>
+                <div class="upi-container" style="display: flex; align-items: center; gap: 6px;">
+                    <a href="upi://pay?pa=vaishnav.flare25@okhdfcbank&pn=Snack%20Tax%20Developer&cu=INR" class="footer-link upi-link" title="Tap to open UPI app (Mobile only)">🇮🇳 UPI: vaishnav.flare25@okhdfcbank</a>
+                    
+                    <button onclick="window.openQrModal()" class="expand-qr-btn" title="Enlarge QR Code">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
+                    </button>
+
+                    <div class="qr-tooltip">
+                        <img src="https://quickchart.io/qr?text=upi%3A%2F%2Fpay%3Fpa%3Dvaishnav.flare25%40okhdfcbank%26pn%3DSnack%2520Tax%2520Developer%26cu%3DINR&size=160&margin=1" alt="UPI QR Code">
+                        <span>Scan to pay</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
 
@@ -1829,7 +1959,7 @@
         </div>
     </div>
 
-    <!-- Phase 18: Custom Clear Data Modal -->
+    <!-- Custom Clear Data Modal -->
     <div id="clear-data-modal" class="modal-overlay">
         <div class="modal-content">
             <h2 style="margin-bottom: 4px; font-size: 24px; color: #ff4444;">Danger Zone: Clear Data</h2>
@@ -1859,6 +1989,20 @@
                 <button type="button" class="btn-secondary" onclick="closeCustomModals()">Cancel</button>
                 <button type="button" class="btn-primary btn-danger flex-2" id="btn-execute-clear" disabled>Delete Selected</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Expanded QR Modal -->
+    <div id="qr-modal" class="modal-overlay">
+        <div class="modal-content" style="display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 380px;">
+            <h2 style="margin-bottom: 8px; font-size: 24px; color: var(--accent-emerald);">Scan to Pay</h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">vaishnav.flare25@okhdfcbank</p>
+            
+            <div style="background: white; padding: 16px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(0, 255, 102, 0.2);">
+                <img src="https://quickchart.io/qr?text=upi%3A%2F%2Fpay%3Fpa%3Dvaishnav.flare25%40okhdfcbank%26pn%3DSnack%2520Tax%2520Developer%26cu%3DINR&size=300&margin=1" alt="Massive UPI QR Code" style="display: block; width: 300px; height: 300px;">
+            </div>
+            
+            <button type="button" class="btn-secondary" onclick="closeCustomModals()" style="width: 100%;">Close</button>
         </div>
     </div>
 
@@ -2081,6 +2225,7 @@
             document.getElementById('export-modal').classList.remove('active');
             document.getElementById('import-confirm-modal').classList.remove('active');
             document.getElementById('clear-data-modal').classList.remove('active');
+            document.getElementById('qr-modal').classList.remove('active');
             document.getElementById('edit-log-qty').value = ''; 
             pendingImportData = null; 
         };
@@ -3169,6 +3314,7 @@
             document.getElementById('btn-view-past-data').classList.remove('hidden');
             document.getElementById('btn-export-data').classList.remove('hidden');
             document.getElementById('btn-import-data').classList.remove('hidden'); 
+            document.getElementById('btn-clear-data').classList.remove('hidden'); 
             document.getElementById('btn-close-history').classList.add('hidden');
         };
 
@@ -3180,6 +3326,7 @@
             document.getElementById('btn-view-past-data').classList.add('hidden');
             document.getElementById('btn-export-data').classList.add('hidden');
             document.getElementById('btn-import-data').classList.add('hidden'); 
+            document.getElementById('btn-clear-data').classList.add('hidden'); 
             document.getElementById('btn-close-history').classList.remove('hidden');
         };
 
@@ -3437,27 +3584,26 @@
             });
         }
 
-        // Phase 18: Clear Data Engine & Safety Lock
         window.openClearDataModal = function() {
-            // Uncheck all boxes
             document.getElementById('clear-logs').checked = false;
             document.getElementById('clear-library').checked = false;
             document.getElementById('clear-targets').checked = false;
             
-            // Clear input and disable button
             const lockInput = document.getElementById('erase-lock-input');
             lockInput.value = '';
             document.getElementById('btn-execute-clear').disabled = true;
             
-            // Show Modal
             document.getElementById('clear-data-modal').classList.add('active');
+        };
+
+        window.openQrModal = function() {
+            document.getElementById('qr-modal').classList.add('active');
         };
 
         function setupClearDataLogic() {
             const lockInput = document.getElementById('erase-lock-input');
             const deleteBtn = document.getElementById('btn-execute-clear');
 
-            // Safety Lock Listener
             lockInput.addEventListener('input', (e) => {
                 if (e.target.value === 'ERASE') {
                     deleteBtn.disabled = false;
@@ -3466,7 +3612,6 @@
                 }
             });
 
-            // Execution Engine
             deleteBtn.addEventListener('click', () => {
                 const state = getState();
                 const clearLogs = document.getElementById('clear-logs').checked;
@@ -3489,13 +3634,13 @@
                         maxFat: 65,
                         maxFiber: 30,
                         targetWater: 4,
-                        isFirstRun: state.userSettings.isFirstRun, // Preserve FTUE status
-                        hasSeenWelcome: state.userSettings.hasSeenWelcome // Preserve Welcome Banner status
+                        isFirstRun: state.userSettings.isFirstRun, 
+                        hasSeenWelcome: state.userSettings.hasSeenWelcome 
                     };
                 }
 
                 saveState(state);
-                window.location.reload(); // Purge UI & restart
+                window.location.reload(); 
             });
         }
 
@@ -3625,7 +3770,7 @@
             setupDailyLogDelegation();
             setupCustomModals();
             setupImportLogic(); 
-            setupClearDataLogic(); // Phase 18 Initialize Clear Data Engine
+            setupClearDataLogic(); 
             renderDailyLog();
 
             setupWaterDelegation();
