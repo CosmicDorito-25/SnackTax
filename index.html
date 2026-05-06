@@ -1498,14 +1498,8 @@
                 <button id="btn-view-past-data" class="btn-secondary" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="openSelectDateMode()">View Past Data</button>
                 <!-- Phase 13: Added Export Data Button -->
                 <button id="btn-export-data" class="btn-secondary" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="openExportModal()">Export Data</button>
-                <!-- Phase 14: Added Import JSON Button -->
-                <button id="btn-import-data" class="btn-secondary" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="document.getElementById('import-file-input').click()">Import JSON</button>
-                
                 <button id="btn-close-history" class="btn-secondary hidden" style="width: auto; padding: 10px 16px; font-size: 13px;" onclick="closeHistoricalView()">Back to Activity Stream</button>
             </div>
-            
-            <!-- Phase 14: Hidden File Input for Import -->
-            <input type="file" id="import-file-input" accept=".json" class="hidden">
 
             <!-- Phase 12: Read-Only Historical View Container -->
             <div id="historical-view-container" class="hidden">
@@ -1709,19 +1703,6 @@
             <div class="flex-buttons">
                 <button type="button" class="btn-secondary" onclick="closeCustomModals()">Cancel</button>
                 <button type="button" class="btn-primary flex-2" id="btn-confirm-export">Download</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Phase 14: Import Confirmation Modal -->
-    <div id="import-confirm-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2 style="margin-bottom: 4px; font-size: 24px; color: var(--accent-blue);">Confirm Merge</h2>
-            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 24px;">Valid backup found. Importing will merge this data with your current profile. Any overlapping dates or foods will be overwritten by the backup. Do you wish to proceed?</p>
-            
-            <div class="flex-buttons">
-                <button type="button" class="btn-secondary" onclick="closeCustomModals()">Cancel</button>
-                <button type="button" class="btn-primary flex-2" id="btn-execute-import">Confirm Merge</button>
             </div>
         </div>
     </div>
@@ -2646,9 +2627,7 @@
             document.getElementById('custom-delete-modal').classList.remove('active');
             document.getElementById('settings-modal').classList.remove('active');
             document.getElementById('export-modal').classList.remove('active');
-            document.getElementById('import-confirm-modal').classList.remove('active'); // Phase 14 Fix
             document.getElementById('edit-log-qty').value = ''; // Clear inputs
-            pendingImportData = null; // Phase 14 cleanup
         };
 
         // Open Settings Modal
@@ -3239,7 +3218,6 @@
             document.getElementById('activity-stream-container').classList.remove('hidden');
             document.getElementById('btn-view-past-data').classList.remove('hidden');
             document.getElementById('btn-export-data').classList.remove('hidden');
-            document.getElementById('btn-import-data').classList.remove('hidden'); // Phase 14 Fix
             document.getElementById('btn-close-history').classList.add('hidden');
         };
 
@@ -3256,7 +3234,6 @@
             // Toggle Buttons
             document.getElementById('btn-view-past-data').classList.add('hidden');
             document.getElementById('btn-export-data').classList.add('hidden');
-            document.getElementById('btn-import-data').classList.add('hidden'); // Phase 14 Fix
             document.getElementById('btn-close-history').classList.remove('hidden');
         };
 
@@ -3452,7 +3429,7 @@
             alert("Mock data successfully injected for testing! Check the Calendar and Activity Stream.");
         }
 
-        // --- PHASE 13 & 14: EXPORT / IMPORT ENGINE ---
+        // --- PHASE 13: EXPORT ENGINE ---
 
         function prepareExportData(isAllTime, startDateStr, endDateStr) {
             const state = getState();
@@ -3570,64 +3547,6 @@
             closeCustomModals();
         }
 
-        // Phase 14: Smart Merge Import Engine
-        let pendingImportData = null;
-
-        function setupImportLogic() {
-            const fileInput = document.getElementById('import-file-input');
-            const confirmBtn = document.getElementById('btn-execute-import');
-
-            fileInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    try {
-                        const importedData = JSON.parse(event.target.result);
-                        
-                        // Strict Schema Validation Check
-                        if (!importedData.userSettings || !importedData.foodLibrary || !importedData.dailyLogs) {
-                            throw new Error("Missing required schema keys (userSettings, foodLibrary, dailyLogs).");
-                        }
-
-                        // Store temporarily and present the Danger Zone confirmation modal
-                        pendingImportData = importedData;
-                        document.getElementById('import-confirm-modal').classList.add('active');
-
-                    } catch (error) {
-                        alert("Error: Invalid backup file format. " + error.message);
-                        console.error("Import Error:", error);
-                    } finally {
-                        // Reset file input so the exact same file can be selected again if they cancel and retry
-                        fileInput.value = '';
-                    }
-                };
-                reader.readAsText(file);
-            });
-
-            confirmBtn.addEventListener('click', function() {
-                if (!pendingImportData) return;
-
-                const state = getState();
-
-                // 1. Smart Merge: Settings (Direct Overwrite)
-                state.userSettings = pendingImportData.userSettings;
-
-                // 2. Smart Merge: Food Library 
-                // Object.assign safely merges them. Conflicting IDs from the backup will overwrite local ones.
-                Object.assign(state.foodLibrary, pendingImportData.foodLibrary);
-
-                // 3. Smart Merge: Daily Logs (CRITICAL)
-                // Existing local days stay intact. If the backup has data for the exact same YYYY-MM-DD, it overwrites it.
-                Object.assign(state.dailyLogs, pendingImportData.dailyLogs);
-
-                // 4. Save and Force Clean Reload
-                saveState(state);
-                window.location.reload();
-            });
-        }
-
 
         // 4. The Midnight Patch (Listen for tab returning to foreground)
         document.addEventListener("visibilitychange", () => {
@@ -3654,12 +3573,11 @@
             setupLibraryForm();
             renderLibrary();
 
-            // Phase 3 & 5 & 13 & 14 Initializations
+            // Phase 3 & 5 & 13 Initializations
             setupLoggerSearch();
             setupLogModal();
             setupDailyLogDelegation();
             setupCustomModals();
-            setupImportLogic(); // Phase 14 Fix
             renderDailyLog();
 
             // Phase 8 Initializations
