@@ -2,6 +2,8 @@
 
 > you eat it. you log it. you question your life choices.
 
+**No account, no cloud, no sync, no drama — just a fast, privacy-first meal log for tracking calories, meals, and daily intake offline.**
+
 SnackTax is a stupid-simple, local-first calorie tracker that lives entirely in a single HTML file.
 
 No installs. No accounts. No cloud. No “AI-powered insights”.  
@@ -88,7 +90,7 @@ it will just document it.
 GPL v3
 
 if you modify and share it, you must keep it open source.  
-no turning SnackTax into a paid “premium calinto a single HTML file. No account, no cloud, no sync, no drama — just a fast privacy-first meal log for tracking calories, meals, and daily intake offline.orie ecosystem”.
+no turning SnackTax into a paid “premium calorie ecosystem”.
 
 ---
 
